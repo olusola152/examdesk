@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Writing {{ exam.course_code }} · ExamDesk</title>
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='proctor.css') }}">
+</head>
+<body class="proctor-body {{ 'unproctored' if not exam.proctored }}">
+
+{% if exam.proctored %}
+<video id="cam" autoplay muted playsinline></video>
+<div class="cam-shade"></div>
+
+<!-- HUD over the camera -->
+<div class="hud">
+  <div class="hud-row"><span class="rec" id="recDot"></span><strong id="recLabel">Starting camera…</strong></div>
+  <div class="hud-row small" id="proctorState">Loading AI proctor…</div>
+  <div class="strikes">
+    <div><span>Away from camera</span><b id="awayN">{{ sub.away_count }}</b>/{{ max_strikes }}</div>
+    <div><span>Hands without typing</span><b id="handN">{{ sub.hand_count }}</b>/{{ max_strikes }}</div>
+  </div>
+  <div class="hud-row small muted-l">{{ current_user.full_name }} · {{ current_user.identifier }}</div>
+</div>
+<div class="facebox" id="facebox"></div>
+{% endif %}
+
+<!-- exam panel -->
+<section class="exam-panel" id="panel">
+  <header class="ep-head">
+    <div>
+      <strong>{{ exam.course_code }}</strong> — {{ exam.title }}
+      <div class="small muted">Lecturer: {{ exam.lecturer }} · <span id="saveState">All changes saved</span></div>
+    </div>
+    <div class="actions">
+      <span class="timer" id="timer">--:--</span>
+      <button type="button" class="btn gold" onclick="openSubmit()">Submit</button>
+    </div>
+  </header>
+  {% set total_q = objective|length + theory|length %}
+  <div class="ep-nav">
+    <div class="palette" id="palette">{% for i in range(1, total_q + 1) %}<a href="#q{{ i }}" id="p{{ i }}">{{ i }}</a>{% endfor %}</div>
+    <div class="small muted" style="margin-top:.4rem"><strong id="answeredCount">0</strong> of {{ total_q }} answered · flagged questions are underlined in gold</div>
+  </div>
+  <form method="post" id="examForm" class="ep-body" autocomplete="off">
+    {% if exam.instructions %}<div class="flash info small" style="white-space:pre-wrap">{{ exam.instructions }}</div>{% endif %}
+    {% if objective %}
+    <div class="section-title" style="margin-top:0"><span class="tag">SECTION A</span><h3 style="margin:0">Objective</h3></div>
+    {% for q in objective %}{% set n = loop.index %}{% set a = saved.get(q.id) %}
+      <div class="question" id="q{{ n }}" data-n="{{ n }}">
+        <div class="qmeta"><span>Question {{ n }} of {{ total_q }}</span>
+          <span>{{ q.marks|round(1) }} mk · <button type="button" class="flagbtn" onclick="toggleFlag({{ n }}, this)">⚑ Flag</button></span></div>
+        <div class="qtext">{{ q.text }}</div>
+        {% for L in ['A','B','C','D'] %}{% set o = q['option_' ~ L|lower] %}{% if o %}
+          <label class="option"><input type="radio" name="obj_{{ q.id }}" value="{{ L }}" {% if a and a.selected_option == L %}checked{% endif %}>
+            <span class="letter">{{ L }}.</span><span>{{ o }}</span></label>
+        {% endif %}{% endfor %}
+      </div>
+    {% endfor %}{% endif %}
+    {% if theory %}
+    <div class="section-title"><span class="tag">SECTION B</span><h3 style="margin:0">Theory</h3></div>
+    {% for q in theory %}{% set n = objective|length + loop.index %}{% set a = saved.get(q.id) %}
+      <div class="question" id="q{{ n }}" data-n="{{ n }}">
+        <div class="qmeta"><span>Question {{ n }} of {{ total_q }}</span>
+          <span>{{ q.marks|round(1) }} marks · <button type="button" class="flagbtn" onclick="toggleFlag({{ n }}, this)">⚑ Flag</button></span></div>
+        <div class="qtext">{{ q.text }}</div>
+        <textarea class="answer-box" name="th_{{ q.id }}" placeholder="Type your answer here…" spellcheck="false">{{ a.answer_text if a and a.answer_text }}</textarea>
+        <div class="wc"><span class="wcount">0</span> words</div>
+      </div>
+    {% endfor %}{% endif %}
+  </form>
+</section>
+
+{% if exam.proctored %}
+<!-- gate: fullscreen + camera -->
+<div class="gate" id="gate">
+  <div class="modal">
+    <h2>Proctored examination</h2>
+    <p>Your camera is <strong>on and recording</strong> for the whole exam. Your lecturer can watch you live.</p>
+    <ul class="small">
+      <li>Stay in front of the camera, facing the screen. Moving away, turning sideways, leaving the window or another person appearing = <b>warning</b>.</li>
+      <li>Moving your hands in view without typing (e.g. using paper or a phone) = <b>warning</b>.</li>
+      <li><b>{{ max_strikes }} warnings of the same kind and you are banned from this exam for today.</b></li>
+    </ul>
+    <p class="small muted" id="gateMsg">Waiting for camera permission…</p>
+    <button class="btn gold block" id="gateBtn" disabled onclick="enterExam()">Enter full screen &amp; begin</button>
+  </div>
+</div>
+<div class="warnbox" id="warnbox"><div class="wb-in"><div class="wb-icon">⚠</div><div><h2 id="wbTitle">Warning</h2><p id="wbText"></p></div></div></div>
+{% endif %}
+
+<div class="modal-bg" id="submitModal">
+  <div class="modal">
+    <h2>Submit your script?</h2>
+    <p>You have answered <strong id="mAns">0</strong> of {{ objective|length + theory|length }} questions.</p>
+    <p id="mWarn" class="flash warning" style="display:none"></p>
+    <p class="small muted">Once submitted, your script goes to <strong>{{ exam.lecturer }}</strong> and you cannot change it.</p>
+    <div class="actions" style="justify-content:flex-end">
+      <button type="button" class="btn ghost" onclick="closeSubmit()">Keep writing</button>
+      <button type="button" class="btn gold" onclick="finalSubmit()">Yes, submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.EXAM = {
+  proctored: {{ 'true' if exam.proctored else 'false' }},
+  totalQ: {{ objective|length + theory|length }},
+  secondsLeft: {{ seconds_left }},
+  attempt: {{ sub.attempt }},
+  maxStrikes: {{ max_strikes }},
+  urls: {
+    autosave: "{{ url_for('exam_autosave', exam_id=exam.id) }}",
+    violation: "{{ url_for('exam_violation', exam_id=exam.id) }}",
+    frame: "{{ url_for('exam_frame', exam_id=exam.id) }}",
+    chunk: "{{ url_for('exam_chunk', exam_id=exam.id) }}",
+    banned: "{{ url_for('exam_banned', exam_id=exam.id) }}",
+    mediapipe: "{{ url_for('static', filename='mediapipe/vision_bundle.mjs') }}"
+  }
+};
+</script>
+<script src="{{ url_for('static', filename='exam.js') }}"></script>
+{% if exam.proctored %}<script type="module" src="{{ url_for('static', filename='proctor.js') }}"></script>{% endif %}
+</body>
+</html>

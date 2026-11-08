@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Mark · {{ sub.identifier }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{{ url_for('exam_submissions', exam_id=exam.id) }}">← All scripts</a></p>
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h1>{{ sub.full_name }} <span class="muted" style="font-weight:400">· {{ sub.identifier }}</span></h1>
+      <p class="muted">{{ exam.course_code }} — {{ exam.title }} · {{ sub.department }} · Submitted {{ sub.submitted_at }}{% if sub.marked_by %} · Marked by {{ 'AI Professor' if sub.marked_by=='ai' else sub.marked_by }}{% endif %}</p>
+    </div>
+    <span class="badge b-{{ sub.status }}" style="font-size:.9rem">{{ sub.status.replace('_',' ') }}</span>
+  </div>
+  <div class="grid grid-4">
+    <div class="stat"><div class="n">{{ sub.objective_score|round(1) }}<span class="small muted">/{{ totals.objective|round(1) }}</span></div><div class="l">Objective (auto-marked)</div></div>
+    <div class="stat gold"><div class="n" id="theoryLive">{{ sub.theory_score|round(1) }}</div><div class="l">Theory / {{ totals.theory|round(1) }}</div></div>
+    <div class="stat green"><div class="n" id="totalLive">{{ (sub.objective_score + sub.theory_score)|round(1) }}</div><div class="l">Total / {{ totals.total|round(1) }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>🎥 Proctoring evidence</h2>
+    <div class="actions"><span class="pill {{ 'hot' if sub.away_count>=2 }}">Away {{ sub.away_count }}/3</span><span class="pill {{ 'hot' if sub.hand_count>=2 }}">Hands {{ sub.hand_count }}/3</span>
+      {% if sub.times_banned %}<span class="badge b-banned">Banned {{ sub.times_banned }}×</span>{% endif %}
+      {% if sub.status=='banned' %}<form method="post" action="{{ url_for('submission_unban', sid=sub.id) }}" class="inline"><button class="btn sm green">Lift ban & let them continue</button></form>{% endif %}</div></div>
+  {% if recordings %}
+    {% for a in recordings %}<p class="small muted" style="margin:.2rem 0">Recording{% if recordings|length > 1 %} — attempt {{ a }}{% endif %}</p>
+    <video controls preload="metadata" style="width:100%;max-height:420px;background:#000;border-radius:8px" src="{{ url_for('recording_file', sid=sub.id, attempt=a) }}"></video>{% endfor %}
+  {% else %}<p class="muted small">No recording for this script{{ ' (exam not proctored)' if not exam.proctored }}.</p>{% endif %}
+  {% if violations %}
+  <h3 style="margin-top:1rem">Warnings ({{ violations|length }})</h3>
+  <div class="vgrid">{% for v in violations %}<div class="vcard">
+    {% if v.snapshot %}<a href="{{ url_for('violation_snap', name=v.snapshot) }}" target="_blank"><img src="{{ url_for('violation_snap', name=v.snapshot) }}"></a>{% endif %}
+    <div><b>{{ 'Away' if v.vtype=='away' else 'Hands' }} {{ v.strike }}/3</b> · {{ v.created_at[11:] }}<br>{{ v.detail }}</div></div>{% endfor %}</div>
+  {% endif %}
+</div>
+
+<form method="post">
+{% set objq = rows|selectattr('qtype','equalto','objective')|list %}
+{% set thq = rows|selectattr('qtype','equalto','theory')|list %}
+
+{% if thq %}
+<div class="section-title"><span class="tag">SECTION B</span><h2 style="margin:0">Theory — mark each answer</h2>
+  <button type="button" class="btn sm" style="background:#6b3fb5;margin-left:auto" id="aiBtn" onclick="aiSuggest()">🎓 AI Professor: suggest marks</button></div>
+{% for q in thq %}
+<div class="question">
+  <div class="qmeta"><span>Question {{ loop.index }}</span><span>{{ q.marks|round(1) }} marks</span></div>
+  <div class="qtext">{{ q.text }}</div>
+  {% if q.marking_guide %}<p class="small" style="margin:.2rem 0 .5rem"><b>Marking guide:</b> {{ q.marking_guide }}</p>{% endif %}
+  <p class="small muted" style="margin:.2rem 0">Student's answer:</p>
+  <div class="ans">{{ q.answer_text if q.answer_text and q.answer_text.strip() else '— No answer provided —' }}</div>
+  <div class="row" style="margin-top:.6rem">
+    <div style="max-width:180px"><label>Marks awarded (max {{ q.marks|round(1) }})</label>
+      <input class="mk" id="mk_{{ q.id }}" type="number" name="marks_{{ q.id }}" min="0" max="{{ q.marks }}" step="0.5" value="{{ q.awarded_marks if q.awarded_marks is not none else '' }}" {% if sub.status=='in_progress' %}disabled{% endif %}></div>
+    <div><label>Feedback to student (optional)</label><input type="text" id="fb_{{ q.id }}" name="feedback_{{ q.id }}" value="{{ q.feedback or '' }}"></div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="card">
+  <label style="margin-top:0">Overall comment</label>
+  <textarea name="comment" rows="2" placeholder="General remarks on this script">{{ sub.lecturer_comment or '' }}</textarea>
+  <div class="actions" style="margin-top:1rem">
+    <button class="btn green">Save marks</button>
+    <button class="btn gold" name="next" value="1">Save & mark next script →</button>
+  </div>
+</div>
+
+{% if objq %}
+<div class="section-title"><span class="tag">SECTION A</span><h2 style="margin:0">Objective — auto-marked</h2></div>
+<div class="card">
+  <table>
+    <tr><th>#</th><th>Question</th><th>Student</th><th>Correct</th><th>Marks</th></tr>
+    {% for q in objq %}
+    <tr>
+      <td>{{ loop.index }}</td><td>{{ q.text }}</td>
+      <td class="{{ 'ok' if q.selected_option == q.correct_option else 'bad' }}">{{ q.selected_option or '—' }}</td>
+      <td>{{ q.correct_option }}</td>
+      <td>{{ (q.awarded_marks or 0)|round(1) }} / {{ q.marks|round(1) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+const obj = {{ sub.objective_score or 0 }};
+function recalc(){
+  let t = 0; document.querySelectorAll('.mk').forEach(i => {
+    const max = parseFloat(i.max); let v = parseFloat(i.value) || 0;
+    if (v > max) { v = max; i.value = max; } t += v; });
+  document.getElementById('theoryLive').textContent = t.toFixed(1);
+  document.getElementById('totalLive').textContent = (t + obj).toFixed(1);
+}
+document.querySelectorAll('.mk').forEach(i => i.addEventListener('input', recalc));
+async function aiSuggest() {
+  const b = document.getElementById('aiBtn'); b.disabled = true; b.textContent = 'AI Professor is marking…';
+  try {
+    const j = await (await fetch("{{ url_for('ai_suggest', sid=sub.id) }}", {method: 'POST'})).json();
+    for (const [id, r] of Object.entries(j.results)) {
+      const m = document.getElementById('mk_' + id), f = document.getElementById('fb_' + id);
+      if (m) m.value = r.marks; if (f) f.value = r.feedback;
+    }
+    recalc(); b.textContent = '✔ Suggested — review and save';
+  } catch (e) { b.textContent = 'AI marking failed — try again'; b.disabled = false; }
+}
+</script>
+{% endblock %}

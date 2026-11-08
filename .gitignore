@@ -1,0 +1,11 @@
+.env
+instance/
+__pycache__/
+*.db
+!data/dictionary.db
+# big offline voice models stay on laptops (GitHub refuses files over 100 MB)
+data/whisper-*/
+data/vosk-*/
+dist/
+build/
+*.spec

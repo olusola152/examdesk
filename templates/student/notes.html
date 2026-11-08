@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notes · {{ title }}</title>
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+  body{background:#fff}
+  .notes{max-width:900px;margin:1.5rem auto;padding:0 1.2rem}
+  .nhead{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--accent);padding-bottom:.6rem;margin-bottom:1rem}
+  .part{break-inside:avoid;margin-bottom:1.6rem}
+  .part h2{border-left:5px solid var(--accent);padding-left:.6rem}
+  .dg-step{opacity:1 !important}
+  .part .screen{aspect-ratio:960/500;max-width:760px;margin:.6rem 0;border-radius:8px}
+  .selftest li{margin:.6rem 0}
+  .ans{color:var(--muted);font-size:.85rem}
+  .gl dt{font-weight:700;color:var(--navy);margin-top:.5rem}.gl dd{margin:0 0 .3rem 0}
+  @media print{details{display:block}details>summary{list-style:none}.no-print{display:none}.part .screen{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="notes">
+  <div class="nhead">
+    <div><img src="{{ url_for('static', filename='logo.png') }}" style="width:42px;vertical-align:middle;margin-right:.5rem"><b style="font-size:1.3rem;color:var(--navy)">{{ title }}</b>
+      <div class="small muted">{{ subtitle }} · Notes by AI Professor</div></div>
+    <button class="btn no-print" onclick="print()">🖨 Print / Save as PDF</button>
+  </div>
+  {% for s in segs if s.kind != 'intro' %}
+  <div class="part">
+    <h2>{{ loop.index }}. {{ s.title }}</h2>
+    <ul>{% for p in s.points %}<li>{{ p }}</li>{% endfor %}</ul>
+    {% if s.svg %}<div class="screen">{{ s.svg|safe }}</div>{% endif %}
+  </div>
+  {% endfor %}
+  {% if glossary %}
+  <div class="part">
+    <h2>Key terms</h2>
+    <dl class="gl">{% for g in glossary %}<dt>{{ g.term }}</dt><dd>{{ g.meaning }}</dd>{% endfor %}</dl>
+  </div>
+  {% endif %}
+  <details class="part no-print-closed"><summary><b>Full explanation (what the teacher said)</b></summary>
+    {% for s in segs %}<p><b>{{ s.title }}.</b> {{ s.speech }}</p>{% endfor %}
+  </details>
+  {% set checks = segs|selectattr('check')|list %}
+  {% if checks %}
+  <div class="part selftest">
+    <h2>Practice questions</h2>
+    <ol>{% for s in checks %}<li>{{ s.check.question }}<br>
+      {% for o in s.check.options %}<span style="margin-right:1rem">{{ 'ABCD'[loop.index0] }}. {{ o }}</span>{% endfor %}
+      <div class="ans">Answer: {{ s.check.answer }}{% if s.check.explain %} — {{ s.check.explain }}{% endif %}</div></li>{% endfor %}</ol>
+  </div>
+  {% endif %}
+</div>
+
+</body>
+</html>

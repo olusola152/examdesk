@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Create account{% endblock %}
+{% block container_class %}narrow{% endblock %}
+{% block content %}
+<div class="card" style="margin-top:2rem">
+  <h1>Create account</h1>
+  <form method="post">
+    <label>I am a</label>
+    <select name="role" id="role" onchange="setRole()">
+      <option value="student" {% if role=='student' %}selected{% endif %}>Student</option>
+      <option value="lecturer" {% if role=='lecturer' %}selected{% endif %}>Lecturer</option>
+    </select>
+    <label>Full name</label>
+    <input type="text" name="full_name" required>
+    <label id="idlabel">Matric number</label>
+    <input type="text" name="identifier" id="identifier" required>
+    <label>Department</label>
+    <input type="text" name="department" placeholder="e.g. Computer Science">
+    <label>Email address</label>
+    <input type="email" name="email" required>
+    <div class="row">
+      <div><label>Password</label><input type="password" name="password" minlength="6" required></div>
+      <div><label>Confirm</label><input type="password" name="confirm" minlength="6" required></div>
+    </div>
+    <button class="btn block">Create account</button>
+  </form>
+  <p class="small muted" style="margin-top:1rem">Already registered? <a href="{{ url_for('login') }}">Sign in</a></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function setRole(){
+  const lec = document.getElementById('role').value === 'lecturer';
+  document.getElementById('idlabel').textContent = lec ? 'Staff ID' : 'Matric number';
+  document.getElementById('identifier').placeholder = lec ? 'e.g. STF/0231' : 'e.g. CSC/2021/045';
+}
+setRole();
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Report · {{ exam.course_code }}{% endblock %}
+{% block content %}
+<p class="small no-print"><a href="{{ url_for('exam_submissions', exam_id=exam.id) }}">← Scripts</a></p>
+<div class="card-head">
+  <div><h1>Performance report — {{ exam.course_code }}</h1><p class="muted" style="margin:0">{{ exam.title }} · {{ stats.count }} scripts · out of {{ totals.total|round(1) }} marks</p></div>
+  <div class="actions no-print"><button class="btn ghost" onclick="print()">Print</button><a class="btn ghost" href="{{ url_for('export_csv', exam_id=exam.id) }}">⬇ CSV</a></div>
+</div>
+<div class="grid grid-4" style="margin-bottom:1.2rem">
+  <div class="stat"><div class="n">{{ stats.avg }}%</div><div class="l">Class average</div></div>
+  <div class="stat green"><div class="n">{{ stats.high }}%</div><div class="l">Highest</div></div>
+  <div class="stat red"><div class="n">{{ stats.low }}%</div><div class="l">Lowest</div></div>
+  <div class="stat gold"><div class="n">{{ stats.pass_rate }}%</div><div class="l">Pass rate (≥40%) · {{ stats.banned }} banned</div></div>
+</div>
+<div class="card" style="border-left:5px solid #6b3fb5">
+  <div class="card-head"><h2>🎓 AI Professor's report to the lecturer</h2>
+    <form method="post" class="no-print"><button class="btn sm" style="background:#6b3fb5">{{ 'Regenerate' if exam.ai_report else 'Generate report' }}</button></form></div>
+  <p style="white-space:pre-wrap">{{ exam.ai_report or 'Click Generate report for a written summary of what the class understood and what to re-teach.' }}</p>
+</div>
+<div class="grid grid-2" style="align-items:start">
+  <div class="card">
+    <h2>Grade distribution</h2>
+    {% for L, n in stats.dist.items() %}
+      <div class="actions" style="margin:.35rem 0"><b style="width:1.5rem">{{ L }}</b>
+        <div class="bar-h" style="flex:1"><div style="width:{{ (n / stats.count * 100) if stats.count else 0 }}%"></div></div><span class="small" style="width:2rem">{{ n }}</span></div>
+    {% endfor %}
+    <h2 style="margin-top:1.2rem">Ranking</h2>
+    <table><tr><th>#</th><th>Student</th><th>Score</th><th>Grade</th></tr>
+      {% for s, p in ranked %}<tr><td>{{ loop.index }}</td><td>{{ s.full_name }}<br><span class="small muted">{{ s.identifier }}</span></td>
+        <td>{{ ((s.objective_score or 0) + (s.theory_score or 0))|round(1) }} <span class="small muted">({{ p|round(1) }}%)</span></td><td>{{ grade_letter(p) }}</td></tr>{% endfor %}</table>
+  </div>
+  <div class="card">
+    <h2>Question difficulty</h2>
+    <p class="small muted">Average % of marks scored per question — low bars show topics to re-teach.</p>
+    {% for q in qstats %}
+      <div style="margin:.55rem 0"><div class="small">{{ loop.index }}. {{ q.text[:110] }}{{ '…' if q.text|length > 110 }} <span class="muted">({{ q.qtype }})</span></div>
+        <div class="actions"><div class="bar-h" style="flex:1"><div style="width:{{ q.pct }}%;background:{{ 'var(--red)' if q.pct < 40 else ('var(--accent)' if q.pct < 60 else 'var(--green)') }}"></div></div><span class="small">{{ q.pct }}%</span></div></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

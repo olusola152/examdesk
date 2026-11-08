@@ -1,0 +1,11 @@
+flask>=3.0
+pypdf
+python-docx
+python-pptx
+psycopg[binary]>=3.1
+psycopg-pool
+requests
+python-dotenv
+gunicorn
+edge-tts
+pywin32; sys_platform == "win32"

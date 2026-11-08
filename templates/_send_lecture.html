@@ -1,0 +1,63 @@
+{% macro send_form(courses, rosters, fixed_course=None, chosen=None, audience='all', action=None, button='Send lecture') %}
+{% set uid = range(100000)|random %}
+<form method="post" enctype="multipart/form-data" class="sendform" id="sf{{ uid }}"
+      action="{{ action or (url_for('lecture_upload', course_id=fixed_course) if fixed_course else url_for('lecture_upload')) }}">
+  {% if not action %}
+    {% if not fixed_course %}
+      <label>Course</label>
+      <select name="course_id" class="sf-course" required>
+        <option value="">Choose course…</option>
+        {% for c in courses %}<option value="{{ c.id }}">{{ c.code }} — {{ c.title }}</option>{% endfor %}
+      </select>
+    {% endif %}
+    <div class="row">
+      <div><label>Lecture title</label><input type="text" name="title" placeholder="Week 3: Software Testing"></div>
+      <div><label>Lecture file (PDF, Word, PowerPoint)</label><input type="file" name="file" accept=".pdf,.docx,.pptx,.txt,.md" required></div>
+    </div>
+  {% endif %}
+  <label>Send to</label>
+  <div class="audience">
+    <label class="aud"><input type="radio" name="audience" value="all" {% if audience=='all' %}checked{% endif %}> <span><b>All students</b> in the course<br><span class="small muted">Includes students who join later</span></span></label>
+    <label class="aud"><input type="radio" name="audience" value="selected" {% if audience=='selected' %}checked{% endif %}> <span><b>Selected students</b><br><span class="small muted">Choose who receives it</span></span></label>
+  </div>
+  <div class="picker" style="display:none">
+    <div class="actions" style="justify-content:space-between;margin:.5rem 0">
+      <input type="text" class="sf-search" placeholder="Search name or matric no…" style="flex:1;max-width:260px">
+      <span class="small"><a href="#" class="sf-all">Select all</a> · <a href="#" class="sf-none">Clear</a> · <b class="sf-count">0</b> selected</span>
+    </div>
+    <div class="sf-list"></div>
+  </div>
+  <button class="btn block">{{ button }}</button>
+</form>
+<script>
+(() => {
+  const ROSTERS = {{ rosters|tojson }}, CHOSEN = new Set({{ (chosen or [])|list|tojson }});
+  const f = document.getElementById('sf{{ uid }}'), list = f.querySelector('.sf-list'), picker = f.querySelector('.picker');
+  const courseSel = f.querySelector('.sf-course');
+  const fixed = {{ fixed_course|tojson }};
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function count() { f.querySelector('.sf-count').textContent = f.querySelectorAll('.sf-list input:checked').length; }
+  function fill() {
+    const cid = fixed || (courseSel && courseSel.value);
+    const ss = ROSTERS[cid] || [];
+    list.innerHTML = ss.length ? ss.map(s => `<label class="stu"><input type="checkbox" name="students" value="${s.id}" ${CHOSEN.has(s.id) ? 'checked' : ''}>
+      <span>${esc(s.name)}</span><span class="small muted">${esc(s.matric)}</span></label>`).join('')
+      : '<p class="small muted">' + (cid ? 'No students have joined this course yet — share the class code.' : 'Choose a course first.') + '</p>';
+    count();
+  }
+  function toggle() { picker.style.display = f.querySelector('input[name=audience]:checked').value === 'selected' ? 'block' : 'none'; }
+  f.querySelectorAll('input[name=audience]').forEach(r => r.addEventListener('change', toggle));
+  courseSel && courseSel.addEventListener('change', fill);
+  list.addEventListener('change', count);
+  f.querySelector('.sf-all').onclick = e => { e.preventDefault(); list.querySelectorAll('label.stu:not([hidden]) input').forEach(i => i.checked = true); count(); };
+  f.querySelector('.sf-none').onclick = e => { e.preventDefault(); list.querySelectorAll('input').forEach(i => i.checked = false); count(); };
+  f.querySelector('.sf-search').addEventListener('input', e => { const q = e.target.value.toLowerCase();
+    list.querySelectorAll('label.stu').forEach(l => l.hidden = !l.textContent.toLowerCase().includes(q)); });
+  f.addEventListener('submit', e => {
+    if (f.querySelector('input[name=audience]:checked').value === 'selected' && !list.querySelector('input:checked')) {
+      e.preventDefault(); alert('Tick at least one student, or choose All students.'); }
+  });
+  fill(); toggle();
+})();
+</script>
+{% endmacro %}

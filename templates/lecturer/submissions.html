@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.course_code }} · Scripts{% endblock %}
+{% block content %}
+<p class="small"><a href="{{ url_for('exam_manage', exam_id=exam.id) }}">← Back to exam</a></p>
+<div class="card">
+  <div class="card-head">
+    <div><h1>Scripts — {{ exam.course_code }}</h1><p class="muted">{{ exam.title }} · Total {{ totals.total|round(1) }} marks</p></div>
+    <div class="actions">
+      {% if exam.status=='open' %}<a class="btn green" href="{{ url_for('exam_live', exam_id=exam.id) }}">● Watch live</a>{% endif %}
+      <a class="btn ghost" href="{{ url_for('exam_report', exam_id=exam.id) }}">Report</a>
+      <a class="btn ghost" href="{{ url_for('export_csv', exam_id=exam.id) }}">⬇ Score sheet (CSV)</a>
+      <form class="inline" method="post" action="{{ url_for('exam_status', exam_id=exam.id) }}">
+        {% if exam.results_released %}<button class="btn ghost" name="action" value="withhold">Hide results</button>
+        {% else %}<button class="btn gold" name="action" value="release" onclick="return confirm('Release results to all students?')">Release results</button>{% endif %}
+      </form>
+    </div>
+  </div>
+  <p class="small">Results are currently <strong>{{ 'visible' if exam.results_released else 'hidden' }}</strong> to students.</p>
+  {% if subs %}
+  <table>
+    <tr><th>Matric No</th><th>Student</th><th>Status</th><th>Proctor</th><th>Objective</th><th>Theory</th><th>Total</th><th>Grade</th><th></th></tr>
+    {% for s in subs %}
+      {% set tot = (s.objective_score or 0) + (s.theory_score or 0) %}
+      {% set pct = (tot / totals.total * 100) if totals.total else 0 %}
+      <tr>
+        <td><strong>{{ s.identifier }}</strong></td>
+        <td>{{ s.full_name }}<br><span class="small muted">{{ s.submitted_at or 'started ' ~ s.started_at }}</span></td>
+        <td><span class="badge b-{{ s.status }}">{{ s.status.replace('_',' ') }}</span>{% if s.marked_by %}<br><span class="small muted">by {{ 'AI Professor' if s.marked_by=='ai' else s.marked_by }}</span>{% endif %}</td>
+        <td><span class="pill {{ 'hot' if s.away_count>=2 }}">Away {{ s.away_count }}</span><span class="pill {{ 'hot' if s.hand_count>=2 }}">Hands {{ s.hand_count }}</span>
+          {% if s.times_banned %}<br><span class="small" style="color:var(--red)">Banned {{ s.times_banned }}×</span>{% endif %}</td>
+        <td>{{ s.objective_score|round(1) }}/{{ totals.objective|round(1) }}</td>
+        <td>{% if s.status == 'graded' or not totals.nth %}{{ s.theory_score|round(1) }}/{{ totals.theory|round(1) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td><strong>{{ tot|round(1) }}</strong></td>
+        <td>{% if s.status == 'graded' %}<strong>{{ grade_letter(pct) }}</strong> <span class="small muted">{{ pct|round(0)|int }}%</span>{% else %}—{% endif %}</td>
+        <td class="actions">{% if s.status != 'in_progress' %}<a class="btn sm {{ 'gold' if s.status=='submitted' else 'ghost' }}" href="{{ url_for('submission_grade', sid=s.id) }}">{{ 'Mark script' if s.status=='submitted' else 'Review' }}</a>{% else %}<span class="small muted">Writing…</span>{% endif %}
+          {% if s.status=='banned' %}<form method="post" action="{{ url_for('submission_unban', sid=s.id) }}" class="inline"><button class="btn sm green">Lift ban</button></form>{% endif %}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="muted">No scripts yet. Open the exam and share code <code>{{ exam.access_code }}</code>.</p>{% endif %}
+</div>
+{% if subs|selectattr('status','equalto','marking')|list %}<script>setTimeout(()=>location.reload(), 6000)</script>{% endif %}
+{% endblock %}

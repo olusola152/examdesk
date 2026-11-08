@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "_send_lecture.html" import send_form %}
+{% block title %}{{ course.code }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{{ url_for('lecturer_dashboard') }}">← Command centre</a></p>
+<div class="card">
+  <div class="card-head">
+    <div><h1>{{ course.code }} — {{ course.title }}</h1>
+      <p class="muted" style="margin:0">{{ students|length }} students · {{ lectures|length }} lectures · {{ exams|length }} exams</p></div>
+    <div style="text-align:right"><p class="small muted" style="margin:0">Class code for students</p><span class="code">{{ course.join_code }}</span></div>
+  </div>
+</div>
+
+<div class="grid grid-2" style="align-items:start">
+  <div class="card">
+    <h2>📚 Lectures for AI Professor</h2>
+    <p class="small muted">Upload your lecture notes (PDF, Word .docx, PowerPoint .pptx). AI Professor studies them and teaches the class in its own words — explaining, giving examples and answering questions.</p>
+    {{ send_form(None, rosters, fixed_course=course.id, button='Upload & send to students') }}
+    <table style="margin-top:1rem">
+      <tr><th>Lecture</th><th>Sent to</th><th>Status</th><th>Watched</th><th>Questions</th><th></th></tr>
+      {% for l in lectures %}
+      <tr><td><strong>{{ l.title }}</strong><br><span class="small muted">{{ l.original_name }} · {{ l.created_at[:10] }}</span></td>
+        <td class="small">{{ 'All students' if l.audience=='all' else l.recipients ~ ' selected' }}</td>
+        <td><span class="badge b-{{ l.status }}">{{ l.status }}</span></td><td>{{ l.views }}</td><td>{{ l.questions }}</td>
+        <td><a class="btn sm ghost" href="{{ url_for('lecture_admin', lid=l.id) }}">View</a></td></tr>
+      {% else %}<tr><td colspan="6" class="muted small">No lectures uploaded yet.</td></tr>{% endfor %}
+    </table>
+    {% if lectures|selectattr('status','equalto','preparing')|list %}<script>setTimeout(()=>location.reload(), 8000)</script>{% endif %}
+  </div>
+
+  <div>
+    <div class="card" style="border-left:5px solid #6b3fb5">
+      <h2>🎓 Monthly test by AI Professor</h2>
+      <p class="small muted">AI Professor sets the {{ month }} test from this course's lectures, marks every script (objective and theory) after submission, and reports the scores back to you here and in Monthly records. You review the questions and open the test.</p>
+      <form method="post" action="{{ url_for('monthly_exam', course_id=course.id) }}">
+        <div class="row">
+          <div><label>Objective questions</label><input type="number" name="n_obj" value="10" min="0" max="50"></div>
+          <div><label>Theory questions</label><input type="number" name="n_theory" value="3" min="0" max="10"></div>
+          <div><label>Marks per theory</label><input type="number" name="theory_marks" value="10" min="1"></div>
+          <div><label>Duration (min)</label><input type="number" name="duration" value="45" min="5"></div>
+        </div>
+        <button class="btn gold block">Let AI Professor set the monthly test</button>
+      </form>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Exams in this course</h2><a class="btn sm" href="{{ url_for('exam_new', course=course.id) }}">+ Set my own exam</a></div>
+      <table>
+        {% for e in exams %}
+        <tr><td><strong>{{ e.title }}</strong> {% if e.created_by=='ai' %}<span class="badge b-ai">AI set</span>{% endif %}<br><span class="small muted">{{ e.created_at[:10] }}</span></td>
+          <td><span class="badge b-{{ e.status }}">{{ e.status }}</span></td>
+          <td class="actions"><a class="btn sm ghost" href="{{ url_for('exam_manage', exam_id=e.id) }}">Manage</a>
+            <a class="btn sm ghost" href="{{ url_for('exam_report', exam_id=e.id) }}">Report</a></td></tr>
+        {% else %}<tr><td class="muted small">No exams yet.</td></tr>{% endfor %}
+      </table>
+      <a class="small" href="{{ url_for('records', course=course.id) }}">View monthly records for {{ course.code }} →</a>
+    </div>
+    <div class="card">
+      <h2>Students ({{ students|length }})</h2>
+      <table>{% for s in students %}<tr><td>{{ s.identifier }}</td><td>{{ s.full_name }}</td><td class="small muted">{{ s.joined_at[:10] }}</td></tr>
+      {% else %}<tr><td class="muted small">Share class code <code>{{ course.join_code }}</code> so students can join.</td></tr>{% endfor %}</table>
+    </div>
+  </div>
+</div>
+{% endblock %}

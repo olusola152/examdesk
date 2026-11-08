@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Submission receipt{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px;margin:auto">
+  <div style="text-align:center">
+    <div style="font-size:2.6rem;color:var(--green)">✔</div>
+    <h1>Script submitted</h1>
+    <p class="muted">Your answers have been delivered to the lecturer in charge.</p>
+  </div>
+  <div class="receipt" style="margin-top:1rem">
+    <dl>
+      <dt>Receipt no.</dt><dd>ED-{{ '%05d' % sub.id }}</dd>
+      <dt>Course</dt><dd>{{ exam.course_code }} — {{ exam.title }}</dd>
+      <dt>Lecturer in charge</dt><dd>{{ exam.lecturer }}</dd>
+      <dt>Candidate</dt><dd>{{ current_user.full_name }} ({{ current_user.identifier }})</dd>
+      <dt>Started</dt><dd>{{ sub.started_at }}</dd>
+      <dt>Submitted</dt><dd>{{ sub.submitted_at }}</dd>
+      <dt>Questions answered</dt><dd>{{ answered }} of {{ totals.count }}</dd>
+    </dl>
+  </div>
+  <div class="actions no-print" style="margin-top:1.2rem;justify-content:center">
+    <button class="btn ghost" onclick="window.print()">Print receipt</button>
+    <a class="btn" href="{{ url_for('student_dashboard') }}">Back to dashboard</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.course_code }}{% endblock %}
+{% block content %}
+<div class="grid grid-2" style="align-items:start">
+<div class="card">
+  <p class="small muted" style="margin:0">{{ 'MONTHLY TEST · SET BY AI PROFESSOR' if exam.exam_type=='monthly' else 'EXAMINATION' }}</p>
+  <h1>{{ exam.course_code }} — {{ exam.title }}</h1>
+  <div class="receipt" style="margin:1rem 0">
+    <dl>
+      <dt>Lecturer in charge</dt><dd>{{ exam.lecturer }}</dd>
+      <dt>Candidate</dt><dd>{{ current_user.full_name }} ({{ current_user.identifier }})</dd>
+      <dt>Duration</dt><dd>{{ exam.duration_minutes }} minutes</dd>
+      <dt>Section A — Objective</dt><dd>{{ totals.nobj }} questions · {{ totals.objective|round(1) }} marks</dd>
+      <dt>Section B — Theory</dt><dd>{{ totals.nth }} questions · {{ totals.theory|round(1) }} marks</dd>
+      <dt>Proctoring</dt><dd>{{ 'Camera on & recorded · AI proctor' if exam.proctored else 'Not proctored' }}</dd>
+    </dl>
+  </div>
+  {% if exam.instructions %}<h3>Instructions</h3><p style="white-space:pre-wrap">{{ exam.instructions }}</p>{% endif %}
+</div>
+
+<div class="card">
+  {% if sub and sub.status == 'banned' and not ban_over %}
+    <div class="flash danger"><strong>You are banned from this exam for today.</strong><br>You reached {{ 3 }} warnings. You can try again from {{ sub.banned_until }}, or your lecturer can lift the ban.</div>
+    <a class="btn" href="{{ url_for('student_dashboard') }}">Back to dashboard</a>
+  {% elif sub and sub.status not in ('in_progress','banned') %}
+    <div class="flash info">You have already submitted this exam.</div>
+    <a class="btn" href="{{ url_for('student_dashboard') }}">Back to dashboard</a>
+  {% elif exam.status != 'open' %}
+    <div class="flash warning">This exam is {{ 'not yet open' if exam.status=='draft' else 'closed' }}. Please wait for your lecturer.</div>
+    <a class="btn ghost" href="{{ url_for('exam_lobby', exam_id=exam.id, code=exam.access_code) }}">Refresh</a>
+  {% else %}
+    {% if exam.proctored %}
+      <h2>Camera check</h2>
+      <p class="small muted">Sit facing the screen with your face clearly lit. Clear your desk of papers and phones.</p>
+      <div class="camcheck"><video id="pre" autoplay muted playsinline></video><span id="camStatus">Requesting camera…</span></div>
+    {% endif %}
+    {% if ban_over %}<div class="flash info small">Your ban has ended. You can continue — your earlier answers are kept, the timer restarts and warnings reset.</div>{% endif %}
+    <form method="post" action="{{ url_for('exam_start', exam_id=exam.id) }}" id="startForm">
+      <input type="hidden" name="code" value="{{ exam.access_code }}">
+      <label class="check"><input type="checkbox" required> I am {{ current_user.full_name }} and I agree to be recorded and to follow the exam rules.</label>
+      <button class="btn gold block" id="startBtn" {% if exam.proctored %}disabled{% endif %}>{{ 'Resume exam' if sub else 'Start exam — camera & timer begin' }}</button>
+    </form>
+  {% endif %}
+</div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if exam.proctored %}
+<script>
+(async () => {
+  const st = document.getElementById('camStatus'), btn = document.getElementById('startBtn');
+  if (!st) return;
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }).catch(() => navigator.mediaDevices.getUserMedia({ video: true }));
+    document.getElementById('pre').srcObject = s;
+    st.textContent = '✔ Camera working'; st.className = 'ok';
+    btn.disabled = false;
+    document.getElementById('startForm').addEventListener('submit', () => s.getTracks().forEach(t => t.stop()));
+  } catch (e) {
+    st.innerHTML = '✖ Camera blocked or not found. Allow camera access and reload. (Camera needs HTTPS or localhost.)';
+    st.className = 'bad';
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

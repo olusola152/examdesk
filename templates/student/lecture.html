@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+{% block title %}{{ l.title }} · AI Professor{% endblock %}
+{% block content %}
+<p class="small"><a href="{{ url_for('student_dashboard') }}">← Dashboard</a></p>
+<div class="card-head" style="margin-bottom:.6rem">
+  <div><h1 style="margin:0">{{ l.title }}</h1><p class="muted small" style="margin:0">{{ subtitle }}</p></div>
+  <div class="phases" id="phases">
+    <span id="ph1">✍ Copy notes</span><span id="ph2">🎬 Explain</span>
+  </div>
+</div>
+
+<div class="class-wrap" id="classWrap">
+  <div class="classroom">
+    <div class="stage">
+      <div id="teacher3d"></div>
+      <svg id="prof" viewBox="0 0 260 420" class="prof" aria-label="AI Professor">
+        <ellipse cx="130" cy="410" rx="90" ry="8" fill="rgba(0,0,0,.18)"/>
+        <rect x="98" y="290" width="28" height="115" rx="8" fill="#1d2a3d"/><rect x="134" y="290" width="28" height="115" rx="8" fill="#1d2a3d"/>
+        <ellipse cx="110" cy="406" rx="22" ry="8" fill="#111"/><ellipse cx="150" cy="406" rx="22" ry="8" fill="#111"/>
+        <path d="M70 165 Q130 140 190 165 L200 300 L60 300 Z" fill="#22344f"/>
+        <path d="M118 158 L130 210 L142 158 Z" fill="#fff"/>
+        <path d="M126 168 L130 225 L134 168 Z" fill="#b8862b"/>
+        <path d="M100 160 L130 230 L112 300 L88 300 Z" fill="#1a2940"/><path d="M160 160 L130 230 L148 300 L172 300 Z" fill="#1a2940"/>
+        <path d="M72 170 Q50 230 66 290" stroke="#22344f" stroke-width="26" fill="none" stroke-linecap="round"/>
+        <circle cx="66" cy="292" r="12" fill="#7a4a2b"/>
+        <g id="armR" class="arm"><path d="M188 170 Q215 215 230 160" stroke="#22344f" stroke-width="26" fill="none" stroke-linecap="round"/>
+          <circle cx="232" cy="154" r="12" fill="#7a4a2b"/><rect x="236" y="134" width="5" height="18" rx="2" fill="#f4f1e6" class="chalk"/></g>
+        <rect x="117" y="128" width="26" height="30" rx="8" fill="#6b4024"/>
+        <ellipse cx="130" cy="95" rx="42" ry="50" fill="#7a4a2b"/>
+        <path d="M88 85 Q92 40 130 42 Q170 40 172 85 Q165 60 130 58 Q96 60 88 85Z" fill="#1b1b1b"/>
+        <ellipse cx="88" cy="98" rx="6" ry="11" fill="#6b4024"/><ellipse cx="172" cy="98" rx="6" ry="11" fill="#6b4024"/>
+        <g stroke="#111" stroke-width="2.5" fill="rgba(255,255,255,.15)"><circle cx="113" cy="92" r="12"/><circle cx="147" cy="92" r="12"/><path d="M125 92 H135"/></g>
+        <g id="eyes"><circle cx="113" cy="93" r="3.4" fill="#111"/><circle cx="147" cy="93" r="3.4" fill="#111"/></g>
+        <path d="M104 76 Q113 71 122 76 M138 76 Q147 71 156 76" stroke="#111" stroke-width="3" fill="none"/>
+        <path d="M130 98 Q126 110 132 112" stroke="#5a341c" stroke-width="2.5" fill="none"/>
+        <path d="M112 120 Q130 128 148 120" stroke="#2a1a10" stroke-width="5" fill="none" opacity=".55"/>
+        <ellipse id="mouth" cx="130" cy="124" rx="11" ry="2.5" fill="#3a1410"/>
+      </svg>
+      <div class="nameplate">AI Professor</div>
+    </div>
+
+    <div class="board-area">
+      <div class="board-tabs">
+        <button type="button" id="tabNotes" class="on" onclick="showTab('notes')">📝 Board notes</button>
+        <button type="button" id="tabDiagram" onclick="showTab('diagram')">🎬 Diagram</button>
+        <span class="part-label" id="partLabel"></span>
+      </div>
+      <div class="board" id="boardNotes">
+        <div class="board-inner">
+          <h2 id="segTitle">Getting ready…</h2>
+          <ul id="segPoints"></ul>
+        </div>
+        <div class="board-foot"><div class="progress"><div id="bar"></div></div></div>
+      </div>
+      <div class="screen" id="screen" hidden><svg id="dg"></svg></div>
+
+      <div class="dock copy-panel" id="copyPanel" hidden>
+        <div class="cp-left"><b>✍ Copy the notes into your notebook.</b> <span class="small">Take your time — say <b>"done"</b>, press <kbd>Space</kbd> or click the button.</span></div>
+        <span class="cp-timer" id="copyTimer">0:00</span>
+        <button type="button" class="btn gold" onclick="doneCopying()">✋ I'm done copying</button>
+      </div>
+      <div class="dock check-panel" id="checkPanel" hidden>
+        <div class="cp-title" id="quizTitle">📝 Practice quiz</div>
+        <div class="check-q" id="checkQ"></div>
+        <div class="check-opts" id="checkOpts"></div>
+        <div class="check-fb" id="checkFb"></div>
+      </div>
+      <div class="overlay start-panel" id="startPanel">
+        <div class="cp-title">🎓 Ready for class?</div>
+        <div class="cp-sub">AI Professor writes the notes on the board, waits while you copy, then explains each part with a moving diagram.<br>Turn up your volume.</div>
+        <div class="actions" style="justify-content:center">
+          <button type="button" class="btn gold big" id="startBtn" onclick="startLecture()">▶ Start lecture</button>
+          <button type="button" class="btn ghost" id="restartBtn" onclick="startLecture(0)" hidden>Start from the beginning</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subtitle" id="subtitle">Press <b>Start lecture</b>.</div>
+
+  <div class="card controls">
+    <div class="actions" style="justify-content:center">
+      <button class="btn ghost" onclick="prev()" title="Previous part">⏮</button>
+      <button class="btn gold" id="playBtn" onclick="togglePlay()">▶ Start</button>
+      <button class="btn ghost" onclick="next()" title="Next part">⏭</button>
+      <button class="btn ghost" onclick="repeatPart()" title="Explain this part again (R)">🔁 Repeat</button>
+      <button class="btn ghost" onclick="explainSimpler()" title="Explain it more simply">🙋 Explain simpler</button>
+      <button class="btn ghost" id="flagBtn" onclick="toggleFlag()" title="Tell your lecturer this part is hard (D)">☆ Difficult</button>
+      <button class="btn ghost" onclick="toggleFull()" title="Full-screen class (F)">⛶ Full screen</button>
+      {% set quiz_n = segs|selectattr('check')|list|length %}
+      {% if quiz_n %}<button class="btn ghost" id="quizBtn" onclick="runQuiz()" title="Optional — test yourself after the lecture">📝 Practice quiz ({{ quiz_n }})</button>{% endif %}
+      <a class="btn ghost" href="{{ urls.notes }}" target="_blank">📄 My notes</a>
+      {% if urls.file %}<a class="btn ghost" href="{{ urls.file }}" title="Download the lecture file to study offline">⬇ File</a>{% endif %}
+    </div>
+    <div class="actions small muted" style="justify-content:center;margin-top:.6rem;gap:1.1rem">
+      <label class="inline-opt"><input type="checkbox" id="copyMode" checked> Give me time to copy</label>
+      <label class="inline-opt"><input type="checkbox" id="voiceCmd"> 🎤 Voice commands</label>
+      <label class="inline-opt">Speed <select id="rate" style="width:auto;padding:.2rem"><option value="0.85">Slow</option><option value="1" selected>Normal</option><option value="1.15">Fast</option></select></label>
+      <span id="voiceLabel">🔊 …</span><span id="micState"></span>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>✋ Ask AI Professor</h2>
+    <p class="small muted">Type or <b>press 🎤 and speak</b> in your own accent. He answers aloud with a diagram.
+      {% if stt_ready %}<span class="badge b-open">🎤 offline voice ready</span>{% endif %}</p>
+    <div class="actions">
+      <input type="text" id="qbox" placeholder="e.g. Why does a computer need software?" style="flex:1">
+      <button class="btn ghost mic" id="micBtn" title="Press and speak your question (press again to stop)">🎤</button>
+      <button class="btn" onclick="ask()">Ask</button>
+    </div>
+    <div id="askMicMsg" class="mic-msg" hidden></div>
+    <h3 style="margin:1rem 0 .3rem">📖 Dictionary <span class="small muted" style="font-weight:400">— any English word, works offline</span></h3>
+    <div class="actions">
+      <input type="text" id="dictBox" placeholder="Type or say a word, e.g. pigment" style="flex:1">
+      <button class="btn ghost mic" id="dictMic" title="Say the word">🎤</button>
+      <button class="btn ghost" id="dictBtn" onclick="lookUp()">📖 Look up</button>
+    </div>
+    <div id="dictMicMsg" class="mic-msg" hidden></div>
+    <div id="qa" class="qa">
+      {% for q in qa %}<div class="qa-q">You: {{ q.question }}</div><div class="qa-a">AI Professor: {{ q.answer }}</div>{% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head" style="margin-bottom:.4rem"><h2 style="margin:0">Lecture outline</h2><span class="small" id="score"></span></div>
+    <ol id="outline" class="outline"></ol>
+    <p class="small muted" style="margin-top:.8rem">Keys: <kbd>Space</kbd> done / pause · <kbd>R</kbd> repeat · <kbd>N</kbd> next · <kbd>D</kbd> mark difficult · <kbd>F</kbd> full screen</p>
+  </div>
+</div>
+{% if glossary %}
+<div class="card" id="glossary">
+  <div class="card-head" style="margin-bottom:.4rem"><h2 style="margin:0">📖 Key terms</h2><span class="small muted">Click a term to hear it explained</span></div>
+  <div class="gloss">
+    {% for g in glossary %}<button type="button" class="gloss-item" data-say="{{ g.term }} is {{ g.meaning }}." onclick="sayTerm(this)"><b>{{ g.term }}</b><span>{{ g.meaning }}</span></button>{% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script type="importmap">{"imports": {"three": "{{ url_for('static', filename='three/three.module.js') }}",
+  "three/addons/": "{{ url_for('static', filename='three/addons/') }}"}}</script>
+<script type="module" src="{{ url_for('static', filename='teacher3d.js') }}"></script>
+<script src="{{ url_for('static', filename='dgplayer.js') }}"></script>
+<script src="{{ url_for('static', filename='recorder.js') }}"></script>
+<script>
+const SEGS = {{ segs|tojson }};
+const URLS = {{ urls|tojson }};
+const SPEAK_URL = "{{ url_for('speak') }}";
+const STT_URL = "{{ url_for('stt') }}", DICT_URL = "{{ url_for('dictionary_lookup') }}";
+const STT_READY = {{ 'true' if stt_ready else 'false' }}, STT_STATUS = {{ stt_status|tojson }};
+const CTX = {{ (('&lid=' ~ l.id) if urls.flag else ('&pid=' ~ l.id))|tojson }};
+const COPY_SAY = "Please copy the notes on the board into your notebook. Take your time. Say done, or press the Done button, when you finish.";
+const REMIND = ["Are you done? Say done when you finish.", "Take your time. Tell me when you are done.", "Are we done copying?"];
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let idx = Math.min(SEGS.length - 1, Math.floor(({{ resume }} / 100) * SEGS.length));
+let playing = false, paused = false, run = 0, phase = 'idle', diagram = null;
+const results = {};                       // part -> true/false
+const CANCEL = new Error('cancel');
+
+// ------------------------------------------------------------ settings remembered on this device
+function pref(k, def) { try { const v = localStorage.getItem('ed_' + k); return v === null ? def : v; } catch (e) { return def; } }
+function setPref(k, v) { try { localStorage.setItem('ed_' + k, v); } catch (e) {} }
+['copyMode'].forEach(k => { $(k).checked = pref(k, '1') === '1'; $(k).onchange = () => setPref(k, $(k).checked ? '1' : '0'); });
+$('rate').value = pref('rate', '1'); $('rate').onchange = () => { setPref('rate', $('rate').value); audio.playbackRate = rate(); };
+
+// ------------------------------------------------------------ board, diagram, outline
+function showTab(t) {
+  $('boardNotes').hidden = t !== 'notes'; $('screen').hidden = t !== 'diagram';
+  $('tabNotes').classList.toggle('on', t === 'notes'); $('tabDiagram').classList.toggle('on', t === 'diagram');
+}
+function setPhase(p) {
+  phase = p;
+  ['ph1', 'ph2'].forEach((id, i) => $(id).className = ({ copy: 0, explain: 1 }[p] === i) ? 'on' : '');
+  $('copyPanel').hidden = p !== 'copy'; $('checkPanel').hidden = p !== 'check';
+}
+function renderOutline() {
+  $('outline').innerHTML = SEGS.map((s, i) => {
+    const r = results[i], mark = (r === true ? ' <span class="ok">✓</span>' : r === false ? ' <span class="bad">✗</span>' : '') + (FLAGS.has(i) ? ' <span title="Marked difficult">⭐</span>' : '');
+    return `<li onclick="goTo(${i})" class="${i === idx ? 'active' : ''} ${i < idx ? 'done' : ''}">${esc(s.title)}${mark}</li>`;
+  }).join('');
+  const vals = Object.values(results);
+  $('score').textContent = vals.length ? `Score: ${vals.filter(Boolean).length}/${vals.length}` : '';
+}
+function header() {
+  const s = SEGS[idx];
+  $('segTitle').textContent = s.title;
+  $('partLabel').textContent = `Part ${idx + 1} of ${SEGS.length}`;
+  $('bar').style.width = ((idx + 1) / SEGS.length * 100) + '%';
+  diagram = DiagramPlayer.mount($('screen'), s.svg, s.cues);
+  renderOutline(); syncFlagBtn();
+}
+function showPoints() { $('segPoints').innerHTML = (SEGS[idx].points || []).map(p => `<li>${esc(p)}</li>`).join(''); }
+
+async function writeBoard(my) {       // chalk-style writing, letter by letter
+  const ul = $('segPoints'); ul.innerHTML = '';
+  $('prof').classList.add('writing'); avatar() && avatar().setWriting(true);
+  for (const p of SEGS[idx].points || []) {
+    const li = document.createElement('li'); li.className = 'chalk-line'; ul.appendChild(li);
+    for (let c = 0; c < p.length; c++) {
+      await gate(my); li.textContent = p.slice(0, c + 1);
+      await sleep(p[c] === ' ' ? 8 : 22);
+    }
+    await sleep(250);
+  }
+  $('prof').classList.remove('writing'); avatar() && avatar().setWriting(false);
+}
+
+// ------------------------------------------------------------ flow control helpers
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function gate(my) { while (paused && my === run) await sleep(150); if (my !== run) throw CANCEL; }
+
+// ------------------------------------------------------------ voice: server audio first, browser fallback
+const audio = new Audio(); audio.preload = 'auto';
+const cache = {};
+function getAudio(text) {
+  if (!cache[text]) cache[text] = fetch(SPEAK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }) }).then(r => r.json()).catch(() => ({ url: null, engine: 'browser' }));
+  return cache[text];
+}
+const sentencesOf = t => (t.match(/[^.!?]+[.!?]*/g) || [t]).map(x => x.trim()).filter(Boolean);
+const rate = () => parseFloat($('rate').value);
+function setVoiceLabel(e) { $('voiceLabel').textContent = e === 'edge' ? '🔊 Natural voice' : e === 'sapi' ? '🔊 Windows voice (offline)' : '🔊 Browser voice'; }
+let speaking = false, lastSpokeAt = 0;
+const avatar = () => window.TeacherAvatar;
+function talking(on) {
+  speaking = on; if (!on) lastSpokeAt = Date.now(); $('prof').classList.toggle('talking', on);
+  if (avatar()) { avatar().setTalking(on); if (!actx || audio.paused) avatar().setLevel(on ? 0.45 : 0); }
+}
+
+let actx = null, analyser = null, abuf = null;
+function lipSync() {
+  if (actx) { actx.resume(); return; }
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = actx.createMediaElementSource(audio);
+    analyser = actx.createAnalyser(); analyser.fftSize = 512; abuf = new Uint8Array(analyser.fftSize);
+    src.connect(analyser); analyser.connect(actx.destination);
+    (function frame() {
+      requestAnimationFrame(frame);
+      $('prof').classList.toggle('lipsync', !audio.paused);
+      if (audio.paused) { $('mouth').style.transform = ''; return; }
+      analyser.getByteTimeDomainData(abuf);
+      let sum = 0; for (let i = 0; i < abuf.length; i++) { const v = (abuf[i] - 128) / 128; sum += v * v; }
+      const level = Math.min(1, Math.sqrt(sum / abuf.length) * 6);
+      $('mouth').style.transform = `scaleY(${1 + level * 4.5})`;
+      if (avatar()) avatar().setLevel(level);
+    })();
+  } catch (e) { actx = null; }
+}
+
+// say(text, onProgress) -> Promise that resolves when finished (rejects with CANCEL if interrupted)
+function say(text, my, onProgress) {
+  return new Promise(async (resolve, reject) => {
+    const fail = () => reject(CANCEL);
+    const r = await getAudio(text);
+    if (my !== run) return fail();
+    setVoiceLabel(r.engine);
+    const sents = sentencesOf(text), total = sents.reduce((a, s) => a + s.length, 0) || 1;
+    const sub = pos => { let acc = 0; for (const s of sents) { acc += s.length; if (pos <= acc) { $('subtitle').textContent = s; break; } } };
+    if (r.url) {
+      audio.src = r.url; audio.playbackRate = rate();
+      const tick = () => {
+        if (my !== run) return;
+        if (audio.duration && isFinite(audio.duration)) { const p = audio.currentTime / audio.duration; sub(p * total); onProgress && onProgress(p); }
+        if (!audio.paused || paused) requestAnimationFrame(tick);
+      };
+      audio.onplay = () => { talking(true); requestAnimationFrame(tick); };
+      audio.onpause = () => talking(false);
+      audio.onended = () => { talking(false); onProgress && onProgress(1); my === run ? resolve() : fail(); };
+      audio.onerror = () => browserSay(sents, my, onProgress).then(resolve, reject);
+      $('subtitle').textContent = sents[0];
+      audio.play().catch(() => browserSay(sents, my, onProgress).then(resolve, reject));
+      return;
+    }
+    browserSay(sents, my, onProgress).then(resolve, reject);
+  });
+}
+const synth = window.speechSynthesis;
+function pickVoice() {
+  const vs = synth ? synth.getVoices().filter(v => /^en/i.test(v.lang)) : [], local = vs.filter(v => v.localService);
+  const pool = navigator.onLine ? vs : (local.length ? local : vs);
+  return pool.find(v => /en-NG/i.test(v.lang)) || pool.find(v => /Microsoft (David|Mark|Guy|George)/i.test(v.name)) || local[0] || pool[0] || null;
+}
+async function browserSay(sents, my, onProgress) {
+  setVoiceLabel('browser');
+  for (let i = 0; i < sents.length; i++) {
+    await gate(my);
+    $('subtitle').textContent = sents[i]; onProgress && onProgress(i / sents.length);
+    if (!synth) { await sleep(Math.max(1500, sents[i].length * 60)); continue; }
+    await new Promise(res => {
+      synth.cancel();
+      setTimeout(() => {
+        const u = new SpeechSynthesisUtterance(sents[i]), v = pickVoice();
+        if (v) u.voice = v; u.rate = rate(); u.pitch = 0.9;
+        u.onstart = () => talking(true);
+        u.onboundary = () => { if (avatar()) avatar().setLevel(0.5 + Math.random() * 0.5); };
+        u.onend = u.onerror = () => { talking(false); res(); };
+        synth.speak(u);
+      }, 120);
+    });
+  }
+  onProgress && onProgress(1);
+  if (my !== run) throw CANCEL;
+}
+function stopVoice() {
+  audio.pause(); audio.onplay = audio.onpause = audio.onended = audio.onerror = null;
+  if (synth) synth.cancel();
+  talking(false);
+}
+
+// ------------------------------------------------------------ the lesson, part by part
+let resolveDone = null, resolveAnswer = null;
+function doneCopying() { if (phase === 'copy' && resolveDone) { const r = resolveDone; resolveDone = null; r(); } }
+
+async function waitForDone(my) {
+  let secs = 0, reminders = 0;
+  const t = setInterval(() => { if (!paused) { secs++; $('copyTimer').textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`; } }, 1000);
+  try {
+    await new Promise((resolve, reject) => {
+      resolveDone = resolve;
+      (async function remind() {
+        while (resolveDone === resolve) {
+          await sleep(1000);
+          if (my !== run) { resolveDone = null; return reject(CANCEL); }
+          if (!paused && secs > 0 && secs % 60 === 0 && !speaking) {
+            try { await say(REMIND[reminders++ % REMIND.length], my); } catch (e) {}
+          }
+        }
+      })();
+    });
+  } finally { clearInterval(t); }
+}
+
+function askCheck(my, c) {
+  $('checkQ').textContent = c.question;
+  $('checkFb').textContent = ''; $('checkFb').className = 'check-fb';
+  $('checkOpts').innerHTML = c.options.map((o, i) =>
+    `<button type="button" class="opt" data-l="${'ABCD'[i]}" onclick="answer('${'ABCD'[i]}')"><b>${'ABCD'[i]}</b> ${esc(o)}</button>`).join('');
+  return new Promise(res => { resolveAnswer = res; });
+}
+function answer(L) {
+  if (phase !== 'check' || !resolveAnswer) return;
+  const r = resolveAnswer; resolveAnswer = null; r(L);
+}
+
+async function runPart(i) {
+  const my = ++run;
+  idx = i; stopVoice(); setPhase('idle'); header();
+  const s = SEGS[i];
+  try {
+    // 1. write notes on the board, students copy, wait for "done"
+    showTab('notes');
+    if ((s.points || []).length && s.kind !== 'intro' && $('copyMode').checked) {
+      $('segPoints').innerHTML = '';
+      $('subtitle').textContent = 'Writing on the board…';
+      const sayCopy = say(COPY_SAY, my).catch(() => {});
+      await writeBoard(my);
+      await sayCopy;
+      setPhase('copy'); $('copyTimer').textContent = '0:00';
+      await waitForDone(my);
+      setPhase('idle');
+      await say(["Good.", "Well done.", "Alright, let me explain."][i % 3], my);
+    } else showPoints();
+
+    // 2. explain with the animated diagram ("video")
+    await gate(my);
+    setPhase('explain'); showTab('diagram');
+    if (SEGS[i + 1]) { getAudio(SEGS[i + 1].speech); }       // prepare the next part's voice
+    await say(s.speech, my, p => diagram && diagram.setProgress(p));
+    diagram && diagram.finish();
+
+    setPhase('idle');
+    beat();
+    // next part, or the end
+    if (i < SEGS.length - 1) { await gate(my); return runPart(i + 1); }
+    endLecture();
+  } catch (e) { if (e !== CANCEL) console.error(e); }
+}
+
+function endLecture() {
+  playing = false; paused = false; setPhase('idle'); beat(100);
+  $('playBtn').textContent = '↻ Replay'; $('playBtn').dataset.done = 1;
+  const nq = QUIZ.length;
+  $('subtitle').innerHTML = 'End of lecture. ' +
+    `<a href="${URLS.notes}" target="_blank" style="color:#ffd166">Open your notes</a>` +
+    (nq ? ` · <a href="#" onclick="runQuiz();return false" style="color:#ffd166">Take the practice quiz (${nq})</a> — optional` : '') +
+    ' · or ask a question below.';
+}
+
+// ------------------------------------------------------------ optional practice quiz (never during the lecture)
+const QUIZ = SEGS.map((s, i) => ({ i, c: s.check })).filter(q => q.c);
+async function runQuiz() {
+  if (!QUIZ.length) return;
+  lipSync();
+  const my = ++run; stopVoice(); playing = true; paused = false;
+  $('startPanel').hidden = true; $('playBtn').textContent = '⏸ Pause';
+  let score = 0;
+  try {
+    await say(`Let us do a short practice quiz of ${QUIZ.length} question${QUIZ.length > 1 ? 's' : ''}. Choose A, B, C or D.`, my);
+    for (let k = 0; k < QUIZ.length; k++) {
+      const { i, c } = QUIZ[k];
+      idx = i; header(); showPoints(); showTab('notes');
+      setPhase('check'); $('quizTitle').textContent = `📝 Practice quiz — question ${k + 1} of ${QUIZ.length}`;
+      const pick = askCheck(my, c), letters = c.options.map((o, n) => `${'ABCD'[n]}: ${o}`).join('. ');
+      say(`${c.question} Is it ${letters}?`, my).catch(() => {});
+      const L = await Promise.race([pick, new Promise((_, rej) => { const w = setInterval(() => { if (my !== run) { clearInterval(w); rej(CANCEL); } }, 300); })]);
+      stopVoice();
+      const ok = L === c.answer, right = c.options['ABCD'.indexOf(c.answer)];
+      results[i] = ok; if (ok) score++; renderOutline();
+      document.querySelectorAll('#checkOpts .opt').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.l === c.answer) b.classList.add('right'); else if (b.dataset.l === L) b.classList.add('wrong');
+      });
+      $('checkFb').textContent = ok ? '✓ Correct!' : `✗ The answer is ${c.answer}: ${right}`;
+      $('checkFb').className = 'check-fb ' + (ok ? 'ok' : 'bad');
+      if (URLS.check) fetch(URLS.check, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ part: i, correct: ok, choice: L }) });
+      await say(ok ? `Correct! ${c.explain || ''}` : `Not quite. The answer is ${c.answer}, ${right}. ${c.explain || ''}`, my);
+      await sleep(500);
+    }
+    setPhase('idle');
+    await say(`You scored ${score} out of ${QUIZ.length}. ${score === QUIZ.length ? 'Excellent!' : 'Read your notes again and try once more.'}`, my);
+    $('subtitle').innerHTML = `Practice quiz finished: <b>${score}/${QUIZ.length}</b>. <a href="#" onclick="runQuiz();return false" style="color:#ffd166">Try again</a>`;
+  } catch (e) { if (e !== CANCEL) console.error(e); }
+  playing = false; $('playBtn').textContent = '▶ Continue lecture'; setPhase('idle');
+}
+
+// ------------------------------------------------------------ "this part is difficult" (lecturer sees it)
+const FLAGS = new Set({{ flags|tojson }});
+try { if (!URLS.flag) JSON.parse(localStorage.getItem('ed_flags_' + location.pathname) || '[]').forEach(x => FLAGS.add(x)); } catch (e) {}
+function syncFlagBtn() { const on = FLAGS.has(idx); $('flagBtn').textContent = on ? '⭐ Marked difficult' : '☆ Difficult'; $('flagBtn').classList.toggle('gold', on); }
+function toggleFlag() {
+  const on = !FLAGS.has(idx);
+  on ? FLAGS.add(idx) : FLAGS.delete(idx);
+  if (URLS.flag) fetch(URLS.flag, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ part: idx, on }) });
+  else try { localStorage.setItem('ed_flags_' + location.pathname, JSON.stringify([...FLAGS])); } catch (e) {}
+  syncFlagBtn(); renderOutline();
+}
+
+// ------------------------------------------------------------ key terms: click to hear
+async function sayTerm(btn) {
+  lipSync();
+  const wasPlaying = playing && !paused, my = ++run; stopVoice();
+  try { playing = true; await say(btn.dataset.say, my); } catch (e) {}
+  playing = wasPlaying;
+  if (wasPlaying) runPart(idx);
+}
+
+// ------------------------------------------------------------ controls
+function startLecture(from) {
+  $('startPanel').hidden = true; lipSync();
+  playing = true; paused = false; $('playBtn').textContent = '⏸ Pause';
+  if ($('playBtn').dataset.done) { delete $('playBtn').dataset.done; idx = 0; }
+  if (from !== undefined) idx = from;
+  runPart(idx);
+}
+if (idx > 0) {                                   // came back later: offer to continue where they stopped
+  $('startBtn').textContent = `▶ Continue from part ${idx + 1}`;
+  $('restartBtn').hidden = false;
+}
+function togglePlay() {
+  if (!playing) return startLecture();
+  paused = !paused;
+  $('playBtn').textContent = paused ? '▶ Continue' : '⏸ Pause';
+  if (paused) { if (!audio.paused) audio.pause(); if (synth && synth.speaking) synth.pause(); talking(false); }
+  else { if (audio.src && audio.onended && audio.paused && audio.currentTime > 0 && !audio.ended) audio.play(); if (synth && synth.paused) synth.resume(); }
+}
+function goTo(i) {
+  if (i < 0 || i >= SEGS.length) return;
+  if (!playing) { idx = i; run++; stopVoice(); setPhase('idle'); header(); showPoints(); showTab('notes'); return; }
+  paused = false; $('playBtn').textContent = '⏸ Pause'; runPart(i);
+}
+const next = () => goTo(idx + 1), prev = () => goTo(idx - 1);
+function repeatPart() {
+  if (!playing) return goTo(idx);
+  const my = ++run; stopVoice(); paused = false; $('playBtn').textContent = '⏸ Pause';
+  setPhase('explain'); showTab('diagram'); diagram = DiagramPlayer.mount($('screen'), SEGS[idx].svg, SEGS[idx].cues);
+  say("Let me explain that again. " + SEGS[idx].speech, my, p => diagram.setProgress(p))
+    .then(() => { if (idx < SEGS.length - 1) runPart(idx + 1); else endLecture(); }).catch(() => {});
+}
+async function explainSimpler() {
+  lipSync();
+  const wasPlaying = playing, my = ++run; stopVoice(); setPhase('idle');
+  $('subtitle').textContent = 'AI Professor is thinking of a simpler way…';
+  try {
+    const j = await (await fetch(URLS.simpler, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ part: idx }) })).json();
+    $('qa').insertAdjacentHTML('beforeend', `<div class="qa-q">You: Explain "${esc(SEGS[idx].title)}" more simply</div><div class="qa-a">AI Professor: ${esc(j.answer)}</div>`);
+    playing = true; paused = false; $('startPanel').hidden = true; $('playBtn').textContent = '⏸ Pause';
+    showTab('diagram'); diagram = DiagramPlayer.mount($('screen'), j.svg, j.cues);
+    await say(j.answer, my, p => diagram.setProgress(p));
+    if (!wasPlaying) { playing = false; $('playBtn').textContent = '▶ Continue lecture'; return; }
+    await say("Now, let us continue.", my);
+    if (idx < SEGS.length - 1) runPart(idx + 1); else endLecture();
+  } catch (e) { if (e !== CANCEL) $('subtitle').textContent = 'Could not reach AI Professor. Try again.'; }
+}
+function toggleFull() {
+  const w = $('classWrap');
+  if (document.fullscreenElement) document.exitFullscreen(); else (w.requestFullscreen ? w.requestFullscreen() : null);
+}
+
+// ------------------------------------------------------------ questions
+async function ask(qText) {
+  const q = (qText || $('qbox').value).trim(); if (!q) return;
+  $('qbox').value = '';
+  if (!qText && /^(done|i am done|i'm done|we are done|finished|ready|next|repeat|again)[.!]?$/i.test(q)) {
+    if (phase === 'copy' && /done|finished|ready/i.test(q)) return doneCopying();
+    if (/^next/i.test(q)) return next();
+    if (/^(repeat|again)/i.test(q)) return repeatPart();
+    return;                                                  // "done" when nothing is waiting: nothing to answer
+  }
+  lipSync();
+  const box = $('qa');
+  box.insertAdjacentHTML('beforeend', `<div class="qa-q">You: ${esc(q)}</div><div class="qa-a" id="pending">AI Professor is thinking…</div>`);
+  box.scrollTop = box.scrollHeight;
+  const resumeAt = idx, wasPlaying = playing, my = ++run; stopVoice(); setPhase('idle');
+  try {
+    const j = await (await fetch(URLS.ask, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q }) })).json();
+    showAnswer(j, q);
+    await say(j.answer, my, p => diagram && diagram.setProgress(p));
+    diagram && diagram.finish();
+    if (wasPlaying) { await say("Now, let us continue.", my); runPart(resumeAt); }
+  } catch (e) { if (e !== CANCEL && $('pending')) { $('pending').textContent = 'Could not reach AI Professor. Try again.'; $('pending').removeAttribute('id'); } }
+}
+$('qbox').addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
+
+function showAnswer(j, asked) {
+  const p = $('pending');
+  if (p) {
+    const fixedNote = j.understood && j.understood.toLowerCase() !== asked.toLowerCase()
+      ? `<div class="small muted">I understood: “${esc(j.understood)}”</div>` : '';
+    p.innerHTML = fixedNote + 'AI Professor: ' + esc(j.answer); p.removeAttribute('id');
+  }
+  if (j.svg) { showTab('diagram'); diagram = DiagramPlayer.mount($('screen'), j.svg, j.cues); }
+}
+
+// ------------------------------------------------------------ dictionary: any word, typed or spoken
+async function lookUp(word) {
+  word = (word || $('dictBox').value).trim(); if (!word) return;
+  $('dictBox').value = ''; lipSync();
+  const box = $('qa');
+  box.insertAdjacentHTML('beforeend', `<div class="qa-q">📖 ${esc(word)}</div><div class="qa-a" id="pending">Looking it up…</div>`);
+  box.scrollTop = box.scrollHeight;
+  const resumeAt = idx, wasPlaying = playing && !paused, my = ++run; stopVoice(); setPhase('idle');
+  try {
+    const j = await (await fetch(`${DICT_URL}?word=${encodeURIComponent(word)}${CTX}`)).json();
+    showAnswer(j, word);
+    playing = true;
+    await say(j.answer, my, p => diagram && diagram.setProgress(p));
+    diagram && diagram.finish();
+    playing = wasPlaying;
+    if (wasPlaying) { await say("Now, let us continue.", my); runPart(resumeAt); }
+  } catch (e) { if (e !== CANCEL && $('pending')) { $('pending').textContent = 'Could not look that up. Try again.'; $('pending').removeAttribute('id'); } }
+}
+$('dictBox').addEventListener('keydown', e => { if (e.key === 'Enter') lookUp(); });
+
+// ------------------------------------------------------------ ask by voice: offline speech recognition on this computer
+function micMsg(target, t, kind) {                        // show mic status right under the box being used
+  const el = $(target === 'dict' ? 'dictMicMsg' : 'askMicMsg');
+  $('micState').textContent = '';
+  el.hidden = !t; el.textContent = t || ''; el.className = 'mic-msg' + (kind ? ' ' + kind : '');
+}
+async function listen(target) {
+  const btn = target === 'dict' ? $('dictMic') : $('micBtn');
+  if (window.VoiceRecorder && VoiceRecorder.busy) { VoiceRecorder.record(); return; }   // click again = stop
+  if (!STT_READY) return browserListen(target, btn);
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return micMsg(target, '🎤 This browser cannot use the microphone here. Open the app at http://127.0.0.1 in Chrome or Edge.', 'err');
+  }
+  stopVoice(); btn.classList.add('rec'); btn.textContent = '⏹';
+  micMsg(target, '🎤 Starting microphone…');
+  try {
+    const wav = await VoiceRecorder.record({
+      onStart: () => micMsg(target, '🔴 Listening… speak now. It stops by itself when you pause (or press ⏹).', 'live'),
+      onLevel: l => btn.style.setProperty('--lvl', l) });
+    btn.classList.remove('rec'); btn.textContent = '🎤';
+    if (!wav) return micMsg(target, '🎤 I did not hear anything. Check your microphone is not muted, then press 🎤 and speak a little louder.', 'err');
+    micMsg(target, '⏳ Understanding what you said… (the first time takes a few seconds)');
+    const fd = new FormData(); fd.append('audio', wav, 'q.wav');
+    const r = await fetch(STT_URL + '?' + CTX.slice(1), { method: 'POST', body: fd });
+    let j; try { j = await r.json(); } catch (e) { j = { ok: false, error: 'The server did not answer (' + r.status + ').' }; }
+    if (!j.ok) return micMsg(target, '🎤 ' + (j.error || 'Could not understand. Try again or type it.'), 'err');
+    if (!j.text) return micMsg(target, '🎤 I heard you but could not make out the words. Please try again, a bit closer to the mic.', 'err');
+    micMsg(target, j.raw.toLowerCase() !== j.text.toLowerCase() ? `🎤 Heard “${j.raw}” → understood “${j.text}”` : `🎤 Heard: “${j.raw}”`, 'ok');
+    if (target === 'dict') { $('dictBox').value = j.text; lookUp(j.text); }
+    else { $('qbox').value = j.text; if (!handleCommand(j.text)) ask(j.text); }
+  } catch (e) {
+    btn.classList.remove('rec'); btn.textContent = '🎤';
+    const name = e && e.name;
+    micMsg(target, name === 'NotAllowedError' || name === 'SecurityError'
+      ? '🎤 Microphone is blocked. Click the 🔒 / ⓘ icon at the left of the address bar → Microphone → Allow, then reload the page.'
+      : name === 'NotFoundError' || name === 'OverconstrainedError'
+      ? '🎤 No microphone found. Plug in a headset or check Windows Settings → Privacy → Microphone.'
+      : name === 'NotReadableError'
+      ? '🎤 The microphone is being used by another app (Zoom, WhatsApp, etc.). Close it and try again.'
+      : '🎤 Microphone problem: ' + (e && e.message || e), 'err');
+  }
+}
+function browserListen(target, btn) {                       // no offline model: use Chrome/Edge's online recognition
+  if (!SR) return micMsg(target, '🎤 ' + STT_STATUS, 'err');
+  const one = new SR(); one.lang = 'en-NG'; one.maxAlternatives = 3;
+  btn.classList.add('rec');
+  one.onresult = e => {
+    const t = e.results[0][0].transcript;
+    micMsg(target, `🎤 Heard: “${t}”`, 'ok');
+    if (target === 'dict') lookUp(t); else if (!handleCommand(t)) ask(t);
+  };
+  one.onend = () => btn.classList.remove('rec');
+  one.onerror = () => micMsg(target, '🎤 ' + STT_STATUS, 'err');
+  try { one.start(); } catch (e) {}
+}
+function handleCommand(t) {                                 // "done", "repeat", "next" said into the ask mic
+  const low = t.toLowerCase().trim();
+  if (phase === 'copy' && /^(we are |i am |i'm |we're )?(done|finished|ready)\b/.test(low)) { doneCopying(); return true; }
+  if (/^(repeat|again|say (it|that) again)\b/.test(low)) { repeatPart(); return true; }
+  if (/^next\b/.test(low)) { next(); return true; }
+  return false;
+}
+
+// ------------------------------------------------------------ keyboard
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select')) return;
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); phase === 'copy' ? doneCopying() : togglePlay(); }
+  else if (phase === 'check' && 'abcd'.includes(k) && k.length === 1) answer(k.toUpperCase());
+  else if (k === 'd') toggleFlag();
+  else if (k === 'r') repeatPart(); else if (k === 'n') next(); else if (k === 'f') toggleFull();
+});
+
+// ------------------------------------------------------------ voice commands (Chrome / Edge, needs internet)
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function handleVoice(t) {
+  t = t.toLowerCase().trim();
+  if (speaking || Date.now() - lastSpokeAt < 700) return;            // ignore the teacher's own voice
+  if (phase === 'copy' && /\b(done|finish|finished|ready|don finish|we are done|i am done|completed)\b/.test(t)) return doneCopying();
+  if (phase === 'check') { const m = t.match(/\b(?:option |answer |letter )?([abcd])\b/); if (m) return answer(m[1].toUpperCase()); }
+  if (/\b(repeat|again)\b/.test(t)) return repeatPart();
+  if (/\b(simpler|don'?t understand|not clear|explain more)\b/.test(t)) return explainSimpler();
+  if (/\bnext\b/.test(t)) return next();
+  if (/\b(pause|stop|wait)\b/.test(t)) { if (playing && !paused) togglePlay(); return; }
+  if (/\b(continue|resume|go on)\b/.test(t)) { if (paused) togglePlay(); return; }
+  if (/\bslow(er)?\b/.test(t)) { $('rate').value = '0.85'; $('rate').onchange(); return; }
+  if (/^(teacher|sir|prof|professor)\b/.test(t) && t.split(' ').length > 2) return ask(t.replace(/^(teacher|sir|prof|professor)[, ]*/, ''));
+}
+function startRec() {
+  if (!SR || rec) return;
+  rec = new SR(); rec.lang = 'en-NG'; rec.continuous = true; rec.interimResults = false;
+  rec.onresult = e => handleVoice(e.results[e.results.length - 1][0].transcript);
+  rec.onend = () => { const was = rec; rec = null; if ($('voiceCmd').checked && was) setTimeout(startRec, 300); };
+  rec.onerror = ev => { $('micState').textContent = ev.error === 'not-allowed' ? '🎤 blocked' : ''; };
+  try { rec.start(); $('micState').textContent = '🎤 listening'; } catch (e) {}
+}
+$('voiceCmd').onchange = () => { setPref('voiceCmd', $('voiceCmd').checked ? '1' : '0'); if ($('voiceCmd').checked) startRec(); else if (rec) { const r = rec; rec = null; r.stop(); $('micState').textContent = ''; } };
+if (!SR) { $('voiceCmd').disabled = true; $('voiceCmd').parentElement.title = 'Voice commands need Chrome or Edge'; }
+else if (pref('voiceCmd', '0') === '1') { $('voiceCmd').checked = true; startRec(); }
+$('micBtn').onclick = () => listen('ask');
+$('dictMic').onclick = () => listen('dict');
+
+// ------------------------------------------------------------ progress + start
+function beat(p) {
+  fetch(URLS.beat, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ progress: p ?? Math.round(idx / SEGS.length * 100) }) }).catch(() => {});
+}
+setInterval(() => beat(), 20000); beat();
+header(); showPoints();
+getAudio(COPY_SAY).then(r => setVoiceLabel(r.engine));
+</script>
+{% endblock %}

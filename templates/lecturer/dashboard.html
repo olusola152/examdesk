@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% from "_send_lecture.html" import send_form %}
+{% block title %}Command Centre{% endblock %}
+{% block content %}
+<div class="card-head">
+  <div><h1>Command centre</h1><p class="muted">{{ current_user.full_name }} · {{ current_user.department or 'Lecturer' }} · Staff ID {{ current_user.identifier }}</p></div>
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('records') }}">Monthly records</a>
+    <a class="btn gold" href="{{ url_for('exam_new') }}">+ New exam</a>
+  </div>
+</div>
+{% if ai_mode == 'basic' %}<div class="flash warning small">AI Professor is running in <b>basic mode</b>. For real AI teaching and marking with no internet, install <b>Ollama</b> and run <code>ollama pull llama3.2:3b</code> (see README), or add an <code>ANTHROPIC_API_KEY</code>.</div>
+{% else %}<div class="flash info small">🎓 AI Professor engine: <b>{{ ai_label }}</b>{% if ai_mode == 'ollama' %} — runs on this computer, no internet needed{% endif %}.</div>{% endif %}
+<p class="small muted" style="margin:-.6rem 0 1rem">🔊 Voice: {{ voice_label }}</p>
+
+<div class="grid grid-4" style="margin-bottom:1.2rem">
+  <div class="stat green"><div class="n" id="sWriting">{{ stats.writing }}</div><div class="l">Writing exams now</div></div>
+  <div class="stat"><div class="n">{{ stats.learning }}</div><div class="l">In AI lectures now</div></div>
+  <div class="stat gold"><div class="n">{{ stats.pending }}</div><div class="l">Scripts awaiting marking</div></div>
+  <div class="stat red"><div class="n">{{ stats.banned }}</div><div class="l">Students banned</div></div>
+</div>
+
+<div class="grid" style="grid-template-columns:1.4fr 1fr;align-items:start">
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>My courses</h2>
+        <form method="post" action="{{ url_for('course_new') }}" class="actions">
+          <input type="text" name="code" placeholder="CSC 401" required style="width:110px">
+          <input type="text" name="title" placeholder="Course title" required style="width:200px">
+          <button class="btn sm">+ Add course</button>
+        </form>
+      </div>
+      {% if courses %}
+      <table>
+        <tr><th>Code</th><th>Title</th><th>Class code</th><th>Students</th><th>Lectures</th><th></th></tr>
+        {% for c in courses %}
+        <tr><td><strong>{{ c.code }}</strong></td><td>{{ c.title }}</td><td><code>{{ c.join_code }}</code></td>
+          <td>{{ c.students }}</td><td>{{ c.lectures }}</td>
+          <td><a class="btn sm ghost" href="{{ url_for('course_page', course_id=c.id) }}">Open</a></td></tr>
+        {% endfor %}
+      </table>
+      {% else %}<p class="muted small">Add a course, upload lecture files for AI Professor, and share the class code with your students.</p>{% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Exams</h2></div>
+      {% if exams %}
+      <table>
+        <tr><th>Course</th><th>Title</th><th>Code</th><th>Status</th><th>Live</th><th>Scripts</th><th></th></tr>
+        {% for e in exams %}
+        <tr>
+          <td><strong>{{ e.course_code }}</strong></td>
+          <td>{{ e.title }} {% if e.created_by=='ai' %}<span class="badge b-ai">AI set</span>{% endif %}</td>
+          <td><code>{{ e.access_code }}</code></td>
+          <td><span class="badge b-{{ e.status }}">{{ e.status }}</span></td>
+          <td>{% if e.writing %}<span class="badge b-open">● {{ e.writing }} writing</span>{% else %}—{% endif %}</td>
+          <td>{{ e.subs }}{% if e.pending %} <span class="badge b-submitted">{{ e.pending }} to mark</span>{% endif %}</td>
+          <td class="actions">
+            <a class="btn sm ghost" href="{{ url_for('exam_manage', exam_id=e.id) }}">Manage</a>
+            {% if e.status=='open' %}<a class="btn sm green" href="{{ url_for('exam_live', exam_id=e.id) }}">Watch live</a>{% endif %}
+            <a class="btn sm" href="{{ url_for('exam_submissions', exam_id=e.id) }}">Scripts</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}<p class="muted">No exams yet. <a href="{{ url_for('exam_new') }}">Create one</a>, or let AI Professor set a monthly test from a course page.</p>{% endif %}
+    </div>
+  </div>
+
+  <div>
+  <div class="card" style="border-left:5px solid #6b3fb5">
+    <h2>📤 Send a lecture to students</h2>
+    <p class="small muted">Upload your notes. AI Professor prepares a spoken lecture and delivers it to the students you choose.</p>
+    {% if courses %}{{ send_form(courses, rosters) }}{% else %}<p class="small muted">Add a course first.</p>{% endif %}
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Live activity</h2><span class="small muted">● updates automatically</span></div>
+    <div class="feed" id="feed"><p class="muted small" id="feedEmpty">Nothing yet. Activity from your exams and lectures appears here as it happens.</p></div>
+  </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const ICONS = {ban:'⛔', warning:'⚠', ai:'🎓', question:'✋', submit:'📄', exam:'📝', lecture:'📚', course:'👥', proctor:'🛡', error:'❗'};
+let lastId = 0, first = true;
+async function poll() {
+  try {
+    const j = await (await fetch("{{ url_for('lecturer_feed') }}?after=" + lastId)).json();
+    const feed = document.getElementById('feed');
+    j.events.slice().reverse().forEach(ev => {
+      lastId = Math.max(lastId, ev.id);
+      document.getElementById('feedEmpty')?.remove();
+      const el = document.createElement(ev.link ? 'a' : 'div');
+      if (ev.link) { el.href = ev.link; el.style.color = 'inherit'; }
+      el.className = 'feed-item ' + ev.kind + (first ? '' : ' new');
+      el.innerHTML = `<span class="ico">${ICONS[ev.kind] || '•'}</span><span></span><time>${ev.created_at.slice(11,16)}</time>`;
+      el.children[1].textContent = ev.message;
+      feed.prepend(el);
+    });
+    first = false;
+  } catch (e) {}
+}
+poll(); setInterval(poll, 5000);
+</script>
+{% endblock %}

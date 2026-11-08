@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Result · {{ exam.course_code }}{% endblock %}
+{% block content %}
+{% set tot = sub.objective_score + sub.theory_score %}
+{% set pct = (tot / totals.total * 100) if totals.total else 0 %}
+<p class="small no-print"><a href="{{ url_for('student_dashboard') }}">← My exams</a></p>
+<div class="card">
+  <div class="grid grid-2" style="align-items:center">
+    <div>
+      <p class="small muted" style="margin:0">RESULT SLIP</p>
+      <h1>{{ exam.course_code }} — {{ exam.title }}</h1>
+      <p class="muted">{{ current_user.full_name }} · {{ current_user.identifier }} · Lecturer: {{ exam.lecturer }}</p>
+      <p>Objective: <strong>{{ sub.objective_score|round(1) }}/{{ totals.objective|round(1) }}</strong> &nbsp; Theory: <strong>{{ sub.theory_score|round(1) }}/{{ totals.theory|round(1) }}</strong></p>
+      {% if sub.lecturer_comment %}<p><strong>Lecturer's comment:</strong> {{ sub.lecturer_comment }}</p>{% endif %}
+    </div>
+    <div class="scorebox">
+      <div class="big">{{ tot|round(1) }} / {{ totals.total|round(1) }}</div>
+      <div>{{ pct|round(1) }}% · Grade <strong>{{ grade_letter(pct) }}</strong></div>
+    </div>
+  </div>
+</div>
+
+{% set objq = rows|selectattr('qtype','equalto','objective')|list %}
+{% set thq = rows|selectattr('qtype','equalto','theory')|list %}
+{% if objq %}
+<div class="card">
+  <h2>Section A — Objective</h2>
+  <table>
+    <tr><th>#</th><th>Question</th><th>Your answer</th><th>Correct</th><th>Marks</th></tr>
+    {% for q in objq %}
+    <tr><td>{{ loop.index }}</td><td>{{ q.text }}</td>
+      <td class="{{ 'ok' if q.selected_option == q.correct_option else 'bad' }}">{{ q.selected_option or '—' }}</td>
+      <td>{{ q.correct_option }}</td><td>{{ (q.awarded_marks or 0)|round(1) }}/{{ q.marks|round(1) }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% if thq %}
+<div class="card">
+  <h2>Section B — Theory</h2>
+  {% for q in thq %}
+    <div class="question">
+      <div class="qmeta"><span>Question {{ loop.index }}</span><strong>{{ (q.awarded_marks or 0)|round(1) }} / {{ q.marks|round(1) }}</strong></div>
+      <div class="qtext">{{ q.text }}</div>
+      <div class="ans">{{ q.answer_text if q.answer_text and q.answer_text.strip() else '— No answer —' }}</div>
+      {% if q.feedback %}<p class="small" style="margin-top:.5rem"><strong>Feedback:</strong> {{ q.feedback }}</p>{% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+<div class="no-print" style="text-align:center"><button class="btn ghost" onclick="window.print()">Print result slip</button></div>
+{% endblock %}

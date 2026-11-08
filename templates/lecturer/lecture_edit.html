@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Edit · {{ l.title }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{{ url_for('lecture_admin', lid=l.id) }}">← Back to lecture</a></p>
+<div class="card-head">
+  <div><h1 style="margin:0">✏ Edit lecture — {{ l.title }}</h1>
+    <p class="muted" style="margin:0">Correct anything AI Professor prepared. Students see your version straight away.</p></div>
+</div>
+<form method="post" id="editForm">
+  <input type="hidden" name="count" value="{{ segs|length }}">
+  {% for s in segs %}{% set i = loop.index0 %}
+  <div class="card edit-part" id="part{{ i }}">
+    <div class="card-head" style="margin-bottom:.4rem">
+      <h2 style="margin:0">Part {{ loop.index }} <span class="badge b-draft">{{ {'intro':'Welcome','summary':'Summary'}.get(s.kind, 'Teaching') }}</span></h2>
+      <label class="check" style="margin:0;color:var(--red)"><input type="checkbox" name="del_{{ i }}"> Delete this part</label>
+    </div>
+    <label>Title</label><input type="text" name="title_{{ i }}" value="{{ s.title }}" required>
+    <div class="grid grid-2">
+      <div><label>Board notes (one per line — students copy these)</label>
+        <textarea name="points_{{ i }}" rows="6">{{ s.points|join('\n') }}</textarea></div>
+      <div><label>What the teacher says (explanation)</label>
+        <textarea name="speech_{{ i }}" rows="6" required>{{ s.speech }}</textarea></div>
+    </div>
+    {% if s.kind == 'teach' %}
+    {% set c = s.check or {} %}
+    <details class="q" {% if c %}open{% endif %}><summary><b>📝 Practice question (optional quiz after the lecture — never asked during it)</b> {% if not c %}<span class="small muted">(none — add one, or leave empty)</span>{% endif %}</summary>
+      <label>Question</label><input type="text" name="q_{{ i }}" value="{{ c.question or '' }}" placeholder="e.g. What does “software” mean?">
+      <div class="row">
+        {% for k in range(4) %}<div><label>Option {{ 'ABCD'[k] }}</label><input type="text" name="opt_{{ i }}_{{ k }}" value="{{ (c.options or [])[k] if (c.options or [])|length > k else '' }}"></div>{% endfor %}
+      </div>
+      <div class="row">
+        <div><label>Correct answer</label><select name="ans_{{ i }}">{% for L in 'ABCD' %}<option {% if c.answer == L %}selected{% endif %}>{{ L }}</option>{% endfor %}</select></div>
+        <div style="grid-column:span 3"><label>Why (teacher says this after the answer)</label><input type="text" name="exp_{{ i }}" value="{{ c.explain or '' }}"></div>
+      </div>
+      <label class="check"><input type="checkbox" name="nocheck_{{ i }}" {% if s.check is sameas false %}checked{% endif %}> No question for this part</label>
+    </details>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% set i = segs|length %}
+  <details class="card edit-part"><summary><b>➕ Add a new part</b> <span class="small muted">(appears before nothing — at the end)</span></summary>
+    <label>Title</label><input type="text" name="title_{{ i }}">
+    <div class="grid grid-2">
+      <div><label>Board notes (one per line)</label><textarea name="points_{{ i }}" rows="5"></textarea></div>
+      <div><label>What the teacher says</label><textarea name="speech_{{ i }}" rows="5"></textarea></div>
+    </div>
+    <label>Quick-check question (optional)</label><input type="text" name="q_{{ i }}">
+    <div class="row">{% for k in range(4) %}<div><label>Option {{ 'ABCD'[k] }}</label><input type="text" name="opt_{{ i }}_{{ k }}"></div>{% endfor %}</div>
+    <div class="row"><div><label>Correct answer</label><select name="ans_{{ i }}">{% for L in 'ABCD' %}<option>{{ L }}</option>{% endfor %}</select></div>
+      <div style="grid-column:span 3"><label>Why</label><input type="text" name="exp_{{ i }}"></div></div>
+  </details>
+  <div class="save-bar"><button class="btn green">💾 Save lecture</button> <a class="btn ghost" href="{{ url_for('lecture_admin', lid=l.id) }}">Cancel</a></div>
+</form>
+{% endblock %}

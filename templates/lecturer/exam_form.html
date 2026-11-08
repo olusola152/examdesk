@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if exam else 'New' }} Exam{% endblock %}
+{% block content %}
+<div class="card" style="max-width:780px">
+  <h1>{{ 'Edit exam details' if exam else 'Create a new exam' }}</h1>
+  <p class="muted">You'll add objective and theory questions on the next screen.</p>
+  <form method="post">
+    <label>Course (optional — enrolled students see the exam on their dashboard)</label>
+    <select name="course_id" onchange="if(this.selectedOptions[0].dataset.code){document.getElementById('cc').value=this.selectedOptions[0].dataset.code}">
+      <option value="">— No course (students join with exam code) —</option>
+      {% for c in courses %}<option value="{{ c.id }}" data-code="{{ c.code }}" {% if (exam and exam.course_id==c.id) or pre_course==c.id %}selected{% endif %}>{{ c.code }} — {{ c.title }}</option>{% endfor %}
+    </select>
+    <div class="row">
+      <div><label>Course code</label><input id="cc" type="text" name="course_code" placeholder="CSC 401" value="{{ exam.course_code if exam else (courses|selectattr('id','equalto',pre_course)|map(attribute='code')|first or '') }}" required></div>
+      <div><label>Duration (minutes)</label><input type="number" name="duration_minutes" min="1" value="{{ exam.duration_minutes if exam else 60 }}" required></div>
+    </div>
+    <label>Exam title</label>
+    <input type="text" name="title" placeholder="First Semester Examination — Software Engineering" value="{{ exam.title if exam }}" required>
+    <label>Instructions to candidates</label>
+    <textarea name="instructions" rows="4" placeholder="Answer ALL questions in Section A and any THREE in Section B...">{{ exam.instructions if exam }}</textarea>
+    <label class="check"><input type="checkbox" name="proctored" {% if not exam or exam.proctored %}checked{% endif %}> 🎥 Camera proctoring — full-screen camera, recording, AI warnings, 3 strikes = banned for the day</label>
+    <label class="check"><input type="checkbox" name="ai_marking" {% if exam and exam.ai_marking %}checked{% endif %}> 🎓 Let AI Professor mark theory answers automatically (you can still adjust marks)</label>
+    <label class="check"><input type="checkbox" name="shuffle_questions" {% if exam and exam.shuffle_questions %}checked{% endif %}> Shuffle question order for each student</label>
+    <div class="actions" style="margin-top:1.3rem">
+      <button class="btn">{{ 'Save changes' if exam else 'Create exam & add questions' }}</button>
+      <a class="btn ghost" href="{{ url_for('exam_manage', exam_id=exam.id) if exam else url_for('lecturer_dashboard') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

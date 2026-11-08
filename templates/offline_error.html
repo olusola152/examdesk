@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>No connection · ExamDesk</title>
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body>
+<main class="container narrow" style="max-width:620px;margin-top:3rem">
+  <div class="card" style="text-align:center;padding:2.2rem;border-top:6px solid var(--accent)">
+    <img src="{{ url_for('static', filename='logo.png') }}" style="width:72px">
+    <h1 style="margin-top:.6rem">No internet connection</h1>
+    <p class="muted">ExamDesk online keeps your courses, lectures and exams in the cloud, so it needs internet.
+      It will reconnect by itself as soon as your connection is back.</p>
+    <div class="actions" style="justify-content:center;margin:1rem 0">
+      <button class="btn" onclick="location.reload()">↻ Try again</button>
+      {% if offline_link %}<a class="btn gold" href="{{ offline_link }}">📚 Open Offline Study</a>{% endif %}
+    </div>
+    <div class="flash info small" style="text-align:left">
+      <b>📚 Want to study without internet?</b> Open <b>AI Professor Offline Study</b> on your laptop
+      (<code>start_offline.bat</code>, <code>python offline.py</code>, or the .exe) and upload a lecture file you downloaded earlier.
+      The AI teacher works fully offline there.
+    </div>
+  </div>
+</main>
+<script>setTimeout(() => location.reload(), 15000)</script>
+</body></html>

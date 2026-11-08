@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Monthly records{% endblock %}
+{% block content %}
+<p class="small no-print"><a href="{{ url_for('lecturer_dashboard') }}">← Command centre</a></p>
+<div class="card-head">
+  <div><h1>Monthly records</h1><p class="muted" style="margin:0">Every exam score for the month — including tests set and marked by AI Professor.</p></div>
+  <form class="actions no-print" method="get">
+    <input type="month" name="month" value="{{ month }}" style="width:auto">
+    <select name="course" style="width:auto"><option value="">All courses</option>
+      {% for c in courses %}<option value="{{ c.id }}" {% if course_id==c.id %}selected{% endif %}>{{ c.code }}</option>{% endfor %}</select>
+    <button class="btn sm">Show</button>
+    <a class="btn sm ghost" href="{{ url_for('records', month=month, course=course_id or '', format='csv') }}">⬇ CSV</a>
+    <button type="button" class="btn sm ghost" onclick="print()">Print</button>
+  </form>
+</div>
+<div class="card" style="overflow-x:auto">
+  {% if exams %}
+  <table>
+    <tr><th>Matric No</th><th>Name</th>
+      {% for e in exams %}<th>{{ e.course_code }}<br><span style="text-transform:none;font-weight:400">{{ e.title[:28] }}{% if e.created_by=='ai' %} 🎓{% endif %} (/{{ totals[e.id]|round(1) }})</span></th>{% endfor %}
+      <th>Total</th><th>%</th><th>Grade</th></tr>
+    {% for r in rows %}
+      {% set ns = namespace(got=0, out=0) %}
+      <tr><td><strong>{{ r.matric }}</strong></td><td>{{ r.name }}</td>
+        {% for e in exams %}{% set sc = r.scores.get(e.id) %}{% set ns.out = ns.out + totals[e.id] %}
+          <td>{% if sc %}{% set ns.got = ns.got + sc.score %}{{ sc.score|round(1) }}
+              {% if sc.status in ('submitted','marking') %}<span class="small muted">(marking)</span>{% endif %}
+              {% if sc.banned %}<span class="badge b-banned">banned</span>{% elif sc.strikes %}<span class="small muted">⚠{{ sc.strikes }}</span>{% endif %}
+            {% else %}<span class="muted">ABS</span>{% endif %}</td>{% endfor %}
+        {% set pct = (ns.got / ns.out * 100) if ns.out else 0 %}
+        <td><strong>{{ ns.got|round(1) }}</strong>/{{ ns.out|round(1) }}</td><td>{{ pct|round(1) }}</td><td><strong>{{ grade_letter(pct) }}</strong></td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="muted">No exams in this month{{ ' for this course' if course_id }}.</p>{% endif %}
+</div>
+{% endblock %}

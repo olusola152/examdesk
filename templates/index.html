@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block hero %}
+<section class="hero">
+  <div class="inner">
+    <div>
+      <h1>Set, write and mark exams online.</h1>
+      <p>Lecturers set objective and theory questions. Students write under a timed, auto-saving exam session.
+         Every script is submitted to the lecturer in charge for marking and result release.</p>
+      <div class="actions" style="margin-top:1.5rem">
+        <a class="btn gold" href="{{ url_for('register', role='lecturer') }}">I'm a Lecturer</a>
+        <a class="btn ghost" href="{{ url_for('register', role='student') }}">I'm a Student</a>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 style="color:#fff">How it works</h3>
+      <ol>
+        <li>Lecturer creates an exam and adds Section A (objective) and Section B (theory) questions.</li>
+        <li>Lecturer opens the exam and shares a 6-character access code.</li>
+        <li>Students enter the code, start the timer, and answer. Work auto-saves.</li>
+        <li>Objectives are marked instantly; the lecturer marks theory scripts.</li>
+        <li>Lecturer releases results and exports the score sheet.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block content %}
+<div class="features">
+  <div class="card"><h3>Objective + Theory</h3><p class="muted">Multiple-choice questions with A–D options and essay-style theory questions, each with its own marks.</p></div>
+  <div class="card"><h3>🎥 AI-proctored</h3><p class="muted">Full-screen camera, recording, live monitoring. Moving away or hands without typing = warning; 3 warnings = banned for the day.</p></div>
+  <div class="card"><h3>🎓 AI Professor</h3><p class="muted">Lecturers upload notes; AI Professor teaches them aloud, answers questions, sets and marks monthly tests.</p></div>
+  <div class="card"><h3>Lecturer marking</h3><p class="muted">Mark theory answers with per-question feedback. Objective scores are computed automatically.</p></div>
+  <div class="card"><h3>Results & export</h3><p class="muted">Release results when ready and download a CSV score sheet with grades for the course.</p></div>
+</div>
+{% endblock %}

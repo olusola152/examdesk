@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.course_code }} · Manage{% endblock %}
+{% block content %}
+<p class="small"><a href="{{ url_for('lecturer_dashboard') }}">← Command centre</a></p>
+{% if exam.created_by=='ai' and exam.status=='draft' %}<div class="flash info">AI Professor set these questions from your lectures. Review them — delete or add any — then click <b>Open exam</b>.</div>{% endif %}
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h1>{{ exam.course_code }} — {{ exam.title }}</h1>
+      <p class="muted">{{ exam.duration_minutes }} minutes · {{ totals.count }} questions · {{ totals.total|round(1) }} marks
+        ({{ totals.objective|round(1) }} objective, {{ totals.theory|round(1) }} theory)</p>
+    </div>
+    <div class="actions">{% if exam.created_by=='ai' %}<span class="badge b-ai">Set by AI Professor</span>{% endif %}
+      {% if exam.proctored %}<span class="badge b-draft">🎥 Proctored</span>{% endif %}{% if exam.ai_marking %}<span class="badge b-ai">AI marking</span>{% endif %}
+      <span class="badge b-{{ exam.status }}" style="font-size:.9rem">{{ exam.status }}</span></div>
+  </div>
+  <div class="grid grid-2">
+    <div>
+      <p class="small muted" style="margin:0">Student access code</p>
+      <p style="margin:.3rem 0 .6rem"><span class="code">{{ exam.access_code }}</span></p>
+      <form class="inline" method="post" action="{{ url_for('exam_status', exam_id=exam.id) }}">
+        <button class="btn sm ghost" name="action" value="regen">Generate new code</button>
+      </form>
+    </div>
+    <div class="actions" style="justify-content:flex-end;align-items:flex-start">
+      <a class="btn ghost" href="{{ url_for('exam_edit', exam_id=exam.id) }}">Edit details</a>
+      <a class="btn ghost" href="{{ url_for('exam_submissions', exam_id=exam.id) }}">View scripts</a>
+      <a class="btn ghost" href="{{ url_for('exam_report', exam_id=exam.id) }}">Report</a>
+      {% if exam.status=='open' %}<a class="btn green" href="{{ url_for('exam_live', exam_id=exam.id) }}">● Watch live</a>{% endif %}
+      <form class="inline" method="post" action="{{ url_for('exam_status', exam_id=exam.id) }}">
+        {% if exam.status != 'open' %}
+          <button class="btn green" name="action" value="open">Open exam</button>
+        {% else %}
+          <button class="btn red" name="action" value="close" onclick="return confirm('Close this exam? Students still writing will be submitted automatically.')">Close exam</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+  {% if exam.instructions %}<hr style="border:none;border-top:1px solid var(--line);margin:1rem 0"><p class="small" style="white-space:pre-wrap"><strong>Instructions:</strong> {{ exam.instructions }}</p>{% endif %}
+</div>
+
+<div class="grid grid-2">
+  <!-- objective -->
+  <div class="card" id="objective">
+    <div class="card-head"><h2>Section A — Objective ({{ objective|length }})</h2><span class="muted small">{{ totals.objective|round(1) }} marks</span></div>
+    {% for q in objective %}
+      <div class="q">
+        <div class="qh">
+          <div><span class="num">{{ loop.index }}.</span>{{ q.text }}</div>
+          <div class="actions"><span class="small muted">{{ q.marks|round(1) }} mk</span>
+            <form class="inline" method="post" action="{{ url_for('question_delete', qid=q.id) }}" onsubmit="return confirm('Delete this question?')"><button class="btn sm ghost">✕</button></form></div>
+        </div>
+        <div class="opts">
+          {% for L in ['A','B','C','D'] %}{% set o = q['option_' ~ L|lower] %}{% if o %}
+            <div class="{{ 'correct' if q.correct_option == L }}">{{ L }}. {{ o }} {% if q.correct_option == L %}✓{% endif %}</div>
+          {% endif %}{% endfor %}
+        </div>
+      </div>
+    {% else %}<p class="muted small">No objective questions yet.</p>{% endfor %}
+
+    <h3 style="margin-top:1.2rem">Add objective question</h3>
+    <form method="post" action="{{ url_for('question_add', exam_id=exam.id) }}">
+      <input type="hidden" name="qtype" value="objective">
+      <label>Question</label>
+      <textarea name="text" rows="2" required></textarea>
+      <div class="row">
+        <div><label>Option A</label><input type="text" name="option_a" required></div>
+        <div><label>Option B</label><input type="text" name="option_b" required></div>
+      </div>
+      <div class="row">
+        <div><label>Option C</label><input type="text" name="option_c"></div>
+        <div><label>Option D</label><input type="text" name="option_d"></div>
+      </div>
+      <div class="row">
+        <div><label>Correct answer</label>
+          <select name="correct_option" required><option value="">Select…</option><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
+        <div><label>Marks</label><input type="number" name="marks" step="0.5" min="0.5" value="1"></div>
+      </div>
+      <button class="btn block">Add objective question</button>
+    </form>
+  </div>
+
+  <!-- theory -->
+  <div class="card" id="theory">
+    <div class="card-head"><h2>Section B — Theory ({{ theory|length }})</h2><span class="muted small">{{ totals.theory|round(1) }} marks</span></div>
+    {% for q in theory %}
+      <div class="q">
+        <div class="qh">
+          <div style="white-space:pre-wrap"><span class="num">{{ loop.index }}.</span>{{ q.text }}
+            {% if q.marking_guide %}<div class="small muted" style="margin-top:.4rem"><b>Marking guide:</b> {{ q.marking_guide }}</div>{% endif %}</div>
+          <div class="actions"><span class="small muted">{{ q.marks|round(1) }} mk</span>
+            <form class="inline" method="post" action="{{ url_for('question_delete', qid=q.id) }}" onsubmit="return confirm('Delete this question?')"><button class="btn sm ghost">✕</button></form></div>
+        </div>
+      </div>
+    {% else %}<p class="muted small">No theory questions yet.</p>{% endfor %}
+
+    <h3 style="margin-top:1.2rem">Add theory question</h3>
+    <form method="post" action="{{ url_for('question_add', exam_id=exam.id) }}">
+      <input type="hidden" name="qtype" value="theory">
+      <label>Question</label>
+      <textarea name="text" rows="5" required placeholder="(a) Define software testing. (b) Discuss three levels of testing with examples."></textarea>
+      <label>Marking guide / expected points (used by AI Professor when marking)</label>
+      <textarea name="marking_guide" rows="3" placeholder="Definition (2 marks); unit, integration, system, acceptance testing with examples (2 marks each)..."></textarea>
+      <label>Marks</label>
+      <input type="number" name="marks" step="0.5" min="0.5" value="10">
+      <button class="btn block">Add theory question</button>
+    </form>
+  </div>
+</div>
+
+<div class="card" style="border-color:#f3c0b9">
+  <div class="card-head"><div><h3 style="color:var(--red)">Danger zone</h3><p class="small muted" style="margin:0">Deleting removes all questions and student scripts.</p></div>
+    <form method="post" action="{{ url_for('exam_status', exam_id=exam.id) }}" onsubmit="return confirm('Permanently delete this exam and all scripts?')">
+      <button class="btn red sm" name="action" value="delete">Delete exam</button></form></div>
+</div>
+{% endblock %}

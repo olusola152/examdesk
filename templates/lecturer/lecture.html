@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_send_lecture.html" import send_form %}
+{% block title %}{{ l.title }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{{ url_for('course_page', course_id=l.cid) }}">← {{ l.code }}</a></p>
+<div class="card">
+  <div class="card-head">
+    <div><h1>{{ l.title }}</h1><p class="muted" style="margin:0">{{ l.original_name }} · uploaded {{ l.created_at }} · <span class="badge b-{{ l.status }}">{{ l.status }}</span></p></div>
+    <div class="actions">
+      {% if l.status == 'ready' %}<a class="btn sm gold" href="{{ url_for('lecture_edit', lid=l.id) }}">✏ Edit lecture</a>{% endif %}
+      <a class="btn sm ghost" href="{{ url_for('lecture_download_admin', lid=l.id) }}">⬇ File</a>
+      <form method="post" action="{{ url_for('lecture_action', lid=l.id) }}" class="inline"><button class="btn sm ghost" name="action" value="rebuild">Re-prepare lecture</button></form>
+      <form method="post" action="{{ url_for('lecture_action', lid=l.id) }}" class="inline" onsubmit="return confirm('Delete this lecture?')"><button class="btn sm red" name="action" value="delete">Delete</button></form>
+    </div>
+  </div>
+</div>
+<div class="grid grid-2" style="align-items:start">
+  <div>
+  <div class="card">
+    <h2>📤 Who receives this lecture</h2>
+    <p class="small">Currently: <b>{{ 'All students in ' ~ l.code if l.audience=='all' else chosen|length ~ ' selected student(s)' }}</b></p>
+    {{ send_form(None, rosters_one, fixed_course=l.cid, chosen=chosen, audience=l.audience, action=url_for('lecture_recipients', lid=l.id), button='Update recipients') }}
+  </div>
+  <div class="card">
+    <h2>Students attending ({{ viewers|length }})</h2>
+    <table><tr><th>Student</th><th>Progress</th><th>Last seen</th></tr>
+      {% for v in viewers %}<tr><td>{{ v.full_name }}<br><span class="small muted">{{ v.identifier }}</span></td>
+        <td><div class="bar-h"><div style="width:{{ v.progress }}%"></div></div><span class="small">{{ v.progress }}%</span></td>
+        <td>{% if v.last_seen >= live_cut %}<span class="badge b-open">● Watching now</span>{% else %}<span class="small">{{ v.last_seen|ago }}</span>{% endif %}</td></tr>
+      {% else %}<tr><td colspan="3" class="muted small">No student has opened this lecture yet.</td></tr>{% endfor %}
+    </table>
+    <h2 style="margin-top:1.2rem">Questions students asked ({{ qa|length }})</h2>
+    <div class="qa" style="max-height:none">
+      {% for q in qa %}<div class="qa-q">{{ q.full_name }} ({{ q.identifier }}) · <span class="small muted">{{ q.created_at }}</span><br>{{ q.question }}</div>
+        <div class="qa-a">{{ q.answer }}</div>
+      {% else %}<p class="muted small">No questions yet.</p>{% endfor %}
+    </div>
+  </div>
+  </div>
+  <div class="card">
+    <h2>What AI Professor will teach ({{ segs|length }} parts)</h2>
+    {% if l.status == 'preparing' %}<p class="muted">Preparing… this page refreshes automatically.</p><script>setTimeout(()=>location.reload(), 6000)</script>{% endif %}
+    {% if difficult %}<p class="small">⭐ <b>Parts students marked as difficult</b> — consider re-teaching these in class.</p>{% endif %}
+    {% if understanding %}<p class="small">📊 <b>Practice quiz</b> — % of students who answered each part's question correctly (the quiz is optional, after the lecture).</p>{% endif %}
+    {% for s in segs %}
+      {% set u = understanding.get(loop.index0) %}{% set dfc = difficult.get(loop.index0) %}
+      <details class="q" {% if loop.first %}open{% endif %}><summary><strong>{{ loop.index }}. {{ s.title }}</strong>
+        <span class="small muted">· 🎬 {{ s.visual.type if s.visual else '—' }}</span>
+        {% if dfc %}<span class="pill hot" style="float:right;margin-left:.3rem">⭐ difficult for {{ dfc }}</span>{% endif %}
+        {% if u %}<span class="pill {{ 'hot' if u.pct < 50 }}" style="float:right">{{ u.pct }}% correct ({{ u.n }})</span>{% endif %}</summary>
+        <ul class="small">{% for p in s.points %}<li>{{ p }}</li>{% endfor %}</ul>
+        <p class="small" style="white-space:pre-wrap;color:#33405a">{{ s.speech }}</p>
+        {% if s.check %}<p class="small"><b>Practice question:</b> {{ s.check.question }} <span class="muted">(answer {{ s.check.answer }}: {{ s.check.options['ABCD'.index(s.check.answer)] }})</span></p>{% endif %}
+      </details>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
