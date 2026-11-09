@@ -325,3 +325,51 @@ kbd{background:#eef1f6;border:1px solid #cfd6e3;border-bottom-width:2px;border-r
 .mic-msg.live{background:#fdecea;color:#a12a1f;font-weight:600}
 .mic-msg.err{background:#fff4e5;color:#8a4b00}
 .mic-msg.ok{background:#e8f6ee;color:#1d6b3f}
+
+
+/* ============================================================ phone & tablet */
+.nav-toggle{display:none;background:none;border:1px solid rgba(255,255,255,.35);color:#fff;font-size:1.35rem;line-height:1;
+  padding:.35rem .6rem;border-radius:8px;cursor:pointer}
+.table-wrap,.card table{max-width:100%}
+img,video,canvas,svg{max-width:100%}
+@media(max-width:860px){
+  .topbar .inner{flex-wrap:wrap;padding:.6rem 1rem}
+  .nav-toggle{display:block}
+  .topbar .nav{display:none;width:100%;flex-direction:column;align-items:stretch;gap:0;margin-top:.6rem;
+    border-top:1px solid rgba(255,255,255,.15)}
+  body.nav-open .topbar .nav{display:flex}
+  .topbar .nav a,.topbar .nav .who,.topbar .nav > .role{padding:.7rem .2rem;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}
+  .topbar .nav a.btn{margin:.6rem 0;justify-content:center;border-bottom:0}
+  .grid-2,.grid-4{grid-template-columns:1fr}
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+  body{font-size:15px}
+  h1{font-size:1.35rem} h2{font-size:1.12rem}
+  .brand{font-size:1rem} .brand small{font-size:.62rem}
+  .container{margin:1rem auto;padding:0 .75rem}
+  .card{padding:1rem .95rem;border-radius:12px}
+  .card-head{align-items:flex-start}
+  .stat{padding:.8rem .9rem} .stat .n{font-size:1.45rem}
+  /* 16px inputs stop iPhone from zooming in when a box is tapped */
+  input[type=text],input[type=email],input[type=password],input[type=number],select,textarea{font-size:16px}
+  .row{grid-template-columns:1fr}
+  .btn{padding:.65rem 1rem;min-height:42px}
+  .btn.sm{min-height:34px}
+  .actions{gap:.45rem}
+  .actions > .btn,.actions > form > .btn{flex:1 1 auto;justify-content:center}
+  .actions > input[type=text]{flex:1 1 100% !important}
+  /* tables scroll sideways instead of squashing */
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+  th,td{padding:.55rem .5rem}
+  .modal{padding:1.2rem}
+  .flash{font-size:.88rem}
+  footer{padding:1.2rem .8rem}
+  /* lecture page */
+  .stage{min-height:300px}
+  .screen{min-height:220px}
+  .mic-msg{font-size:.84rem}
+}
+@media(max-width:380px){ .grid-4{grid-template-columns:1fr} }
+.split-main{grid-template-columns:1.4fr 1fr} .split-side{grid-template-columns:1fr 300px}
+@media(max-width:860px){ .split-main,.split-side{grid-template-columns:1fr} }
