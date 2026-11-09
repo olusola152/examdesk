@@ -9,8 +9,7 @@
     <a class="btn gold" href="{{ url_for('exam_new') }}">+ New exam</a>
   </div>
 </div>
-{% if ai_mode == 'basic' %}<div class="flash warning small">AI Professor is running in <b>basic mode</b>. For real AI teaching and marking with no internet, install <b>Ollama</b> and run <code>ollama pull llama3.2:3b</code> (see README), or add an <code>ANTHROPIC_API_KEY</code>.</div>
-{% else %}<div class="flash info small">🎓 AI Professor engine: <b>{{ ai_label }}</b>{% if ai_mode == 'ollama' %} — runs on this computer, no internet needed{% endif %}.</div>{% endif %}
+{% if ai_mode != 'basic' %}<div class="flash info small">🎓 AI Professor engine: <b>{{ ai_label }}</b>{% if ai_mode == 'ollama' %} — runs on this computer, no internet needed{% endif %}.</div>{% endif %}
 <p class="small muted" style="margin:-.6rem 0 1rem">🔊 Voice: {{ voice_label }}</p>
 
 <div class="grid grid-4" style="margin-bottom:1.2rem">
